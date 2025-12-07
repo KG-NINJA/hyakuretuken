@@ -266,6 +266,35 @@
       color: #cfd9e6;
     }
 
+    /* ツイートボタン */
+    .tweet-btn {
+      background: linear-gradient(135deg, #1da1f2, #0d8ecf);
+      color: #fff;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(29, 161, 242, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+    }
+
+    .tweet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(29, 161, 242, 0.45);
+    }
+
+    .tweet-btn.show {
+      display: inline-flex;
+    }
+
+    .tweet-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
     .badge-row {
       display: flex;
       gap: 8px;
@@ -371,6 +400,13 @@
         <div class="controls">
           <button id="start-btn" aria-label="ゲーム開始">10秒スタート</button>
           <button id="reset-btn" class="secondary" aria-label="リセット">リセット</button>
+          <button id="tweet-btn" class="tweet-btn" aria-label="結果をツイート">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+            結果をツイート
+          </button>
         </div>
         <div class="status">スペースキーでも開始できます。</div>
         <div class="log" id="log">カメラ許可ボタンを押してください。</div>
@@ -429,7 +465,11 @@
     const modelStatus = document.getElementById('model-status');
     const poseDot = document.getElementById('pose-dot');
     const poseStatus = document.getElementById('pose-status');
+    const tweetBtn = document.getElementById('tweet-btn');
 
+    // ツイート共有用設定
+    const GAME_URL = 'https://kg-ninja.github.io/hyakuretuken/';
+    const HASHTAG = 'KGNINJA';
     // ゲーム設定
     const DURATION = 10000;
     let timerId = null;
@@ -531,7 +571,10 @@
       if (timerId) cancelAnimationFrame(timerId);
       timerId = null;
       setTime(0);
-      log(`結果: 合計 ${left + right} ジャブ。もう一度挑戦しよう！`);
+      const total = left + right;
+      log(`結果: 合計 ${total} ジャブ。もう一度挑戦しよう！`);
+      // ツイートボタンを表示
+      tweetBtn.classList.add('show');
     }
 
     // ゲームリセット
@@ -544,6 +587,8 @@
       setTime(DURATION);
       updateCounts();
       log('準備完了。STARTボタンかスペースキーで計測開始！');
+      // ツイートボタンを非表示
+      tweetBtn.classList.remove('show');
     }
 
     // フレームごとのタイマー更新
@@ -773,6 +818,14 @@
         cameraBtn.textContent = cameraReady ? 'カメラ稼働中' : 'カメラ許可';
         cameraBtn.disabled = cameraReady;
       });
+    });
+
+    // ツイートボタンのクリックイベント
+    tweetBtn.addEventListener('click', () => {
+      const total = left + right;
+      const tweetText = `10秒で ${total} ジャブ打てた！🥊💥 あなたも挑戦してみて！ #${HASHTAG} ${GAME_URL}`;
+      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+      window.open(tweetUrl, '_blank', 'width=550,height=420');
     });
 
     // 初期状態設定

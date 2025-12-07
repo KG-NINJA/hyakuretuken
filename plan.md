@@ -23,9 +23,10 @@
 - [x] MediaPipe PoseLandmarker統合
 - [x] ウェブカメラアクセス
 - [x] ポーズ描画（スケルトン表示）
-- [x] ジャブ検出アルゴリズム
+- [x] ジャブ検出アルゴリズム（z座標+腕伸び判定）
 - [x] スコア管理・ベスト記録
 - [x] **エラー修正**: TensorFlow.js CDN問題 → MediaPipe Tasks Visionに移行
+- [x] **ツイート共有機能**: 結果をX/Twitterでシェア (#KGNINJA)
 
 ### 未完了タスク ⬜
 （現在なし - すべて完了）
