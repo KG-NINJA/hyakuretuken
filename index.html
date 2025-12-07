@@ -333,10 +333,31 @@
     </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+  <script>
+    // スクリプト動的読み込み
+    async function loadScripts() {
+      const scripts = [
+        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js',
+        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js',
+        'https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js'
+      ];
+      
+      for (const src of scripts) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => {
+            console.error('Failed to load:', src);
+            resolve();
+          };
+          document.head.appendChild(script);
+        });
+      }
+    }
+    
+    window.scriptsReady = loadScripts();
+  </script>
 
   <script>
     const totalEl = document.getElementById('total');
@@ -548,32 +569,20 @@
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
-    async function waitForDependencies() {
-      return new Promise((resolve) => {
-        let attempts = 0;
-        const check = setInterval(() => {
-          attempts++;
-          if (typeof poseDetection !== 'undefined') {
-            clearInterval(check);
-            resolve();
-          } else if (attempts > 50) {
-            clearInterval(check);
-            resolve();
-          }
-        }, 200);
-      });
-    }
-
     async function initDetector() {
       if (detector) return;
       try {
-        await waitForDependencies();
+        // スクリプト読み込み完了を待つ
+        await window.scriptsReady;
+        
         if (typeof poseDetection === 'undefined') {
           throw new Error('poseDetection ライブラリが読み込まれていません');
         }
+        
         await tf.ready();
         await tf.setBackend('webgl');
         updateBadge(modelDot, modelStatus, 'モデル読み込み中...', 'warn');
+        
         detector = await poseDetection.createDetector(
           poseDetection.SupportedModels.MoveNet,
           { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
