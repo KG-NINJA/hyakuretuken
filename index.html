@@ -265,7 +265,7 @@
     <header>
       <div>
         <h1>10秒ジャブ連打チャレンジ</h1>
-        <p>左手と右手のキーを交互に叩いて、10秒間で何発ジャブを打てるか計測しよう！</p>
+        <p>ウェブカメラで腕の動きを検知！リズムよくジャブを打とう！</p>
       </div>
     </header>
     <div class="content">
@@ -304,8 +304,8 @@
           <button id="start-btn" aria-label="ゲーム開始">10秒スタート</button>
           <button id="reset-btn" class="secondary" aria-label="リセット">リセット</button>
         </div>
-        <div class="status">スペースキーでも開始できます。キーを押した瞬間にカウントされます（長押しは1回扱い）。</div>
-        <div class="log" id="log">準備完了。STARTボタンかスペースキーで計測開始！</div>
+        <div class="status">スペースキーでも開始できます。</div>
+        <div class="log" id="log">カメラ許可ボタンを押してください。</div>
       </section>
       <aside class="board">
         <h3>遊び方</h3>
@@ -315,7 +315,7 @@
         </div>
         <div class="controls">
           <button id="camera-btn" class="secondary" aria-label="カメラを有効化">カメラ許可</button>
-          <div class="hint">TensorFlow MoveNetで手の伸びを検知し、左右のジャブを自動カウントします。</div>
+          <div class="hint">TensorFlow MoveNetで手の伸びを自動検知します。</div>
         </div>
         <div class="badge-row" aria-live="polite">
           <div class="badge"><span class="dot" id="cam-dot"></span><span id="cam-status">カメラ待機中</span></div>
@@ -323,35 +323,21 @@
           <div class="badge"><span class="dot" id="pose-dot"></span><span id="pose-status">ポーズ未検出</span></div>
         </div>
         <div class="keys">
-          <div class="key-card">左手：<strong>A</strong> / <strong>←</strong> または左手ジャブ検知</div>
-          <div class="key-card">右手：<strong>L</strong> / <strong>→</strong> または右手ジャブ検知</div>
-          <div class="key-card">開始：<strong>スペース</strong> または <strong>ボタン</strong></div>
-          <div class="key-card">停止：<strong>リセット</strong> ボタン</div>
+          <div class="key-card">左手：<strong>A</strong> / <strong>←</strong></div>
+          <div class="key-card">右手：<strong>L</strong> / <strong>→</strong></div>
+          <div class="key-card">開始：<strong>スペース</strong></div>
+          <div class="key-card">停止：<strong>リセット</strong></div>
         </div>
-        <p style="margin:12px 0 0; color:#c9d6e3; font-size:14px;">両肩を映し、拳を前に突き出すとカウントされます。身体を痛めないようウォームアップしてから挑戦してください！</p>
+        <p style="margin:12px 0 0; color:#c9d6e3; font-size:14px;">両肩を映し、拳を前に突き出すとカウントされます。</p>
       </aside>
     </div>
   </main>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js"></script>
-  <script>
-    // スクリプト読み込み完了待機
-    function waitForDependencies() {
-      return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-          if (typeof tf !== 'undefined' && typeof poseDetection !== 'undefined') {
-            clearInterval(checkInterval);
-            resolve();
-          }
-        }, 100);
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          resolve();
-        }, 5000);
-      });
-    }
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
   <script>
     const totalEl = document.getElementById('total');
     const timeEl = document.getElementById('time');
@@ -375,7 +361,7 @@
     const poseDot = document.getElementById('pose-dot');
     const poseStatus = document.getElementById('pose-status');
 
-    const DURATION = 10_000;
+    const DURATION = 10000;
     let timerId = null;
     let startTime = null;
     let left = 0;
@@ -392,16 +378,6 @@
       right: { extended: false, lastPunch: 0 },
     };
 
-    bestEl.textContent = best;
-    updateBadge(camDot, camStatus, 'カメラ待機中', 'warn');
-    updateBadge(modelDot, modelStatus, 'モデル未ロード', 'warn');
-    updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
-
-    const handKeys = {
-      left: ['a', 'ArrowLeft'],
-      right: ['l', 'ArrowRight'],
-    };
-
     function updateBadge(dot, label, message, state = 'ok') {
       dot.classList.toggle('ok', state === 'ok');
       dot.classList.toggle('warn', state === 'warn');
@@ -416,7 +392,7 @@
       if (total > best) {
         best = total;
         bestEl.textContent = best;
-        log(`記録更新！ ${best} ジャブ`);
+        log(`🎉 記録更新！ ${best} ジャブ`);
       }
     }
 
@@ -482,11 +458,12 @@
 
     function handlePunch(key) {
       if (!running) return;
-      if (handKeys.left.includes(key)) {
+      const k = key.toLowerCase();
+      if (k === 'a' || key === 'ArrowLeft') {
         left += 1;
         updateCounts();
         pulse(leftCard);
-      } else if (handKeys.right.includes(key)) {
+      } else if (k === 'l' || key === 'ArrowRight') {
         right += 1;
         updateCounts();
         pulse(rightCard);
@@ -547,55 +524,66 @@
         poseLoopId = requestAnimationFrame(poseLoop);
         return;
       }
-      const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
-      const ts = performance.now();
-      overlay.width = videoEl.videoWidth;
-      overlay.height = videoEl.videoHeight;
-      const pose = poses[0];
-      drawPose(pose);
-      if (pose?.keypoints?.length) {
-        const kp = Object.fromEntries(pose.keypoints.map((p) => [p.name, p]));
-        updateBadge(poseDot, poseStatus, 'ポーズ検出中', 'ok');
-        lastPoseTs = ts;
-        if (running) {
-          detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
-          detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
+      try {
+        const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
+        const ts = performance.now();
+        overlay.width = videoEl.videoWidth;
+        overlay.height = videoEl.videoHeight;
+        const pose = poses[0];
+        drawPose(pose);
+        if (pose?.keypoints?.length) {
+          const kp = Object.fromEntries(pose.keypoints.map((p) => [p.name, p]));
+          updateBadge(poseDot, poseStatus, 'ポーズ検出中', 'ok');
+          lastPoseTs = ts;
+          if (running) {
+            detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
+            detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
+          }
+        } else if (ts - lastPoseTs > 1500) {
+          updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
         }
-      } else if (ts - lastPoseTs > 1500) {
-        updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
+      } catch (e) {
+        console.error('Pose detection error:', e);
       }
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
     async function initDetector() {
-      if (detector) return detector;
-      await tf.ready();
-      await tf.setBackend('webgl');
-      modelStatus.textContent = 'モデル読み込み中…';
-      detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
-      );
-      pairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-      updateBadge(modelDot, modelStatus, 'MoveNet ロード完了', 'ok');
-      log('モデル読み込み完了。肩から拳が見えるようにカメラを調整してください。');
-      return detector;
+      if (detector) return;
+      try {
+        await tf.ready();
+        await tf.setBackend('webgl');
+        updateBadge(modelDot, modelStatus, 'モデル読み込み中...', 'warn');
+        detector = await window.poseDetection.createDetector(
+          window.poseDetection.SupportedModels.MoveNet,
+          { modelType: window.poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+        );
+        pairs = window.poseDetection.util.getAdjacentPairs(window.poseDetection.SupportedModels.MoveNet);
+        updateBadge(modelDot, modelStatus, 'MoveNet ロード完了', 'ok');
+        log('モデル読み込み完了！肩から拳が見えるように調整してください。');
+        poseLoop();
+      } catch (e) {
+        console.error('Model loading error:', e);
+        log('モデル読み込みエラー: ' + e.message);
+      }
     }
 
     async function initCamera() {
       if (cameraReady) return;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false
+        });
         videoEl.srcObject = stream;
         await videoEl.play();
         cameraReady = true;
         updateBadge(camDot, camStatus, 'カメラ稼働中', 'ok');
-        log('カメラ準備OK！肩と拳が映る位置でスタンバイ。');
+        log('カメラ準備OK！モデルを読み込んでいます...');
         await initDetector();
-        poseLoop();
       } catch (e) {
-        console.error(e);
-        updateBadge(camDot, camStatus, 'カメラ拒否または未接続', 'warn');
+        console.error('Camera error:', e);
+        updateBadge(camDot, camStatus, 'カメラエラー', 'warn');
         log('カメラの許可が必要です。ブラウザ設定を確認してください。');
       }
     }
@@ -622,11 +610,9 @@
     });
 
     setTime(DURATION);
-
-    // 依存関係の読み込み完了を待機してから準備完了
-    waitForDependencies().then(() => {
-      log('依存関係の読み込み完了。カメラ許可ボタンを押してください。');
-    });
+    updateBadge(camDot, camStatus, 'カメラ待機中', 'warn');
+    updateBadge(modelDot, modelStatus, 'モデル未ロード', 'warn');
+    updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
   </script>
 </body>
 </html>
