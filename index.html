@@ -548,17 +548,37 @@
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
+    async function waitForDependencies() {
+      return new Promise((resolve) => {
+        let attempts = 0;
+        const check = setInterval(() => {
+          attempts++;
+          if (typeof poseDetection !== 'undefined') {
+            clearInterval(check);
+            resolve();
+          } else if (attempts > 50) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 200);
+      });
+    }
+
     async function initDetector() {
       if (detector) return;
       try {
+        await waitForDependencies();
+        if (typeof poseDetection === 'undefined') {
+          throw new Error('poseDetection ライブラリが読み込まれていません');
+        }
         await tf.ready();
         await tf.setBackend('webgl');
         updateBadge(modelDot, modelStatus, 'モデル読み込み中...', 'warn');
-        detector = await window.poseDetection.createDetector(
-          window.poseDetection.SupportedModels.MoveNet,
-          { modelType: window.poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+        detector = await poseDetection.createDetector(
+          poseDetection.SupportedModels.MoveNet,
+          { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
         );
-        pairs = window.poseDetection.util.getAdjacentPairs(window.poseDetection.SupportedModels.MoveNet);
+        pairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
         updateBadge(modelDot, modelStatus, 'MoveNet ロード完了', 'ok');
         log('モデル読み込み完了！肩から拳が見えるように調整してください。');
         poseLoop();
