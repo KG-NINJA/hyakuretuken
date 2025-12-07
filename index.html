@@ -484,6 +484,60 @@
     let lastPoseTs = 0;
     let drawingUtils = null;
 
+    // オーディオコンテキストの初期化（効果音用）
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    // レトロなパンチ音を生成して再生
+    function playPunchSound() {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const t = audioCtx.currentTime;
+
+      // 1. ノイズ生成（打撃の衝撃音）
+      const bufferSize = audioCtx.sampleRate * 0.15; // 0.15秒
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      // フィルタで「こもった」感じを出す（打撃感）
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(800, t);
+      noiseFilter.frequency.linearRampToValueAtTime(0, t + 0.1);
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.4, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(t);
+
+      // 2. 矩形波（レトロな8bit感）
+      const osc = audioCtx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(120, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.1); // ピッチダウン
+
+      const oscGain = audioCtx.createGain();
+      oscGain.gain.setValueAtTime(0.1, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+      osc.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    }
+
     // ジャブ検出状態
     const jabState = {
       left: { extended: false, lastPunch: 0 },
@@ -554,6 +608,11 @@
     // ゲーム開始
     function startGame() {
       if (running) return;
+      // オーディオコンテキスト再開（ブラウザの自動再生ポリシー対策）
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
       running = true;
       left = 0;
       right = 0;
@@ -616,6 +675,8 @@
         updateCounts();
         pulse(rightCard);
       }
+      // 効果音再生
+      playPunchSound();
     }
 
     // ポーズ描画（MediaPipe ランドマーク用）
@@ -704,6 +765,8 @@
         }
         state.lastPunch = timestamp;
         updateCounts();
+        // 効果音再生
+        playPunchSound();
         // デバッグ用：検出時にコンソールに出力
         console.log(`${side} jab detected! armExt=${armExtension.toFixed(2)}, zDiff=${(shoulder.z - wrist.z).toFixed(2)}`);
       }

@@ -27,6 +27,7 @@
 - [x] スコア管理・ベスト記録
 - [x] **エラー修正**: TensorFlow.js CDN問題 → MediaPipe Tasks Visionに移行
 - [x] **ツイート共有機能**: 結果をX/Twitterでシェア (#KGNINJA)
+- [x] **効果音追加**: Web Audio APIによるレトロな打撃音生成
 
 ### 未完了タスク ⬜
 （現在なし - すべて完了）
