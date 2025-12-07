@@ -97,6 +97,10 @@
       padding: 12px;
       border: 1px solid rgba(255, 255, 255, 0.04);
     }
+    .score .label {
+      font-size: 14px;
+      color: #c9d6e3;
+    }
     .score .value {
       font-size: 34px;
       margin-top: 6px;
@@ -193,6 +197,10 @@
       transform: translateY(1px);
       filter: brightness(0.95);
     }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .keys {
       display: grid;
       grid-template-columns: repeat(2, minmax(120px, 1fr));
@@ -202,6 +210,7 @@
       border: 1px dashed rgba(255, 255, 255, 0.2);
       border-radius: 10px;
       padding: 10px 12px;
+      font-size: 13px;
     }
     .key-card strong { color: var(--accent); }
     .log {
@@ -349,12 +358,12 @@
     const poseDot = document.getElementById('pose-dot');
     const poseStatus = document.getElementById('pose-status');
 
-    const DURATION = 10_000; // 10 seconds
+    const DURATION = 10_000;
     let timerId = null;
     let startTime = null;
     let left = 0;
     let right = 0;
-    let best = Number(localStorage.getItem('jab-best') || 0);
+    let best = 0;
     let running = false;
     let detector = null;
     let cameraReady = false;
@@ -390,7 +399,6 @@
       if (total > best) {
         best = total;
         bestEl.textContent = best;
-        localStorage.setItem('jab-best', best);
         log(`記録更新！ ${best} ジャブ`);
       }
     }
@@ -414,9 +422,6 @@
 
     function startGame() {
       if (running) return;
-      if (!detector || !cameraReady) {
-        log('カメラとモデルを準備中です…');
-      }
       running = true;
       left = 0;
       right = 0;
