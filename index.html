@@ -3,644 +3,534 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scouter Battle Power HUD</title>
+  <title>10秒ジャブ連打チャレンジ</title>
   <style>
+    :root {
+      --bg: radial-gradient(circle at 30% 30%, #101220, #05060e 60%);
+      --panel: rgba(255, 255, 255, 0.06);
+      --text: #e8f6ff;
+      --accent: #4ef0c0;
+      --accent-2: #ff6b9a;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: radial-gradient(circle at center, #05070c 0%, #010104 70%);
-      font-family: 'Share Tech Mono', 'Consolas', monospace;
-      color: #2fff92;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
-      overflow: hidden;
-    }
-    #stage {
-      position: relative;
-      width: 640px;
-      height: 480px;
-      border: 6px solid #ff0044;
-      box-shadow: 0 0 20px rgba(255, 0, 68, 0.8);
-    }
-    video {
-      width: 640px;
-      height: 480px;
-      object-fit: cover;
-      filter: hue-rotate(-20deg) saturate(1.2) contrast(1.1);
-    }
-    canvas, video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-    }
-    #hud {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #00ff88;
-      text-shadow: 0 0 6px #00ff88;
-      font-size: 22px;
-      letter-spacing: 2px;
-    }
-    #hud .label {
-      font-size: 16px;
-      color: #92ffbd;
-    }
-    #battle-power {
-      font-size: 42px;
-      margin-top: 4px;
-      transition: transform 0.2s ease;
-    }
-    #battle-power.flash {
-      animation: flash 0.4s alternate infinite;
-    }
-    @keyframes flash {
-      from { color: #00ff88; text-shadow: 0 0 8px #00ff88; }
-      to { color: #fffb73; text-shadow: 0 0 16px #fff173; }
-    }
-    #frame-overlay {
-      position: absolute;
-      inset: 0;
-      border: 4px solid rgba(255, 0, 68, 0.15);
-      pointer-events: none;
-      box-shadow: inset 0 0 25px rgba(255, 0, 68, 0.2);
-      opacity: 0;
-      transform: scale(0.9);
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
-    #frame-overlay.active {
-      opacity: 1;
-      border-color: rgba(255, 0, 68, 0.8);
-      transform: scale(1);
-      animation: framePulse 1s ease-in-out infinite;
-    }
-    @keyframes framePulse {
-      0%, 100% { box-shadow: inset 0 0 20px rgba(255, 0, 68, 0.6); }
-      50% { box-shadow: inset 0 0 40px rgba(255, 0, 68, 0.9); }
-    }
-    #blink-indicator {
-      position: absolute;
-      bottom: 12px;
-      right: 16px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: rgba(0, 255, 136, 0.2);
-      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
-    }
-    #blink-indicator.active {
-      animation: blink 0.25s steps(1) infinite;
-    }
-    @keyframes blink {
-      0%, 50% { background: rgba(0, 255, 136, 0.2); }
-      51%, 100% { background: rgba(255, 0, 68, 0.9); }
-    }
-    #special-move {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: #8dfffe;
-      font-size: 32px;
-      text-shadow: 0 0 12px #34d6ff;
-      letter-spacing: 3px;
-      opacity: 0;
-      pointer-events: none;
-    }
-    #special-move.active {
-      animation: moveFlash 1.4s ease-in-out infinite;
-      opacity: 1;
-    }
-    @keyframes moveFlash {
-      0% { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
-      30% { opacity: 1; }
-      60% { transform: translate(-50%, -12px) scale(1.05); }
-      100% { transform: translate(-50%, -20px) scale(1.2); opacity: 0; }
-    }
-    #share-bar {
-      position: absolute;
-      top: 12px;
-      right: 12px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans JP', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex;
-      gap: 10px;
-      pointer-events: auto;
-      z-index: 5;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
     }
-    .share-btn {
-      border: 2px solid #00b7ff;
-      background: rgba(0, 45, 80, 0.7);
-      color: #9fe6ff;
-      font-family: 'Share Tech Mono', monospace;
+    .app {
+      width: min(920px, 100%);
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      backdrop-filter: blur(6px);
+    }
+    header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, rgba(78, 240, 192, 0.18), rgba(255, 107, 154, 0.2));
+    }
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.04em;
+    }
+    header p {
+      margin: 4px 0 0;
+      color: #cdd9e5;
       font-size: 14px;
-      padding: 6px 12px;
-      cursor: pointer;
-      letter-spacing: 1px;
-      box-shadow: 0 0 8px rgba(0, 183, 255, 0.5);
-      transition: background 0.2s ease, transform 0.15s ease;
     }
-    .share-btn:hover {
-      background: rgba(0, 183, 255, 0.3);
-      transform: translateY(-1px);
+    .content {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px;
+      padding: 20px 24px 24px;
     }
-    #rise-layer {
+    .board {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .camera {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #03060f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 260px;
+    }
+    video, canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .camera canvas {
       position: absolute;
       inset: 0;
       pointer-events: none;
+    }
+    .score {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+    .score div {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .score .value {
+      font-size: 34px;
+      margin-top: 6px;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .status {
+      font-size: 15px;
+      color: #c9d6e3;
+    }
+    .timer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      color: #cde6ff;
+    }
+    .bar {
+      flex: 1;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
       overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .rise-text {
-      position: absolute;
-      left: 50%;
-      top: 65%;
-      transform: translate(-50%, 0);
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.1s ease-out;
+    }
+    .hands {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .hand-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .hand-card h3 {
+      margin: 0 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+    }
+    .hand-card .count {
       font-size: 28px;
-      color: #fffd8a;
-      text-shadow: 0 0 10px #ffed4a;
-      animation: riseUp 1s ease-out forwards;
+      margin: 6px 0 0;
+      font-variant-numeric: tabular-nums;
     }
-    @keyframes riseUp {
-      0% { opacity: 0; transform: translate(-50%, 10px) scale(0.8); }
-      20% { opacity: 1; }
-      100% { opacity: 0; transform: translate(-50%, -80px) scale(1.2); }
+    .hand-card kbd {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.25);
+      font-weight: 600;
+      color: #e8f6ff;
+      min-width: 28px;
+      text-align: center;
     }
-    #genkidama-overlay {
-      position: absolute;
-      inset: -20px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,170,0.35) 0%, rgba(0,0,0,0) 60%);
-      mix-blend-mode: screen;
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.6);
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
     }
-    #genkidama-overlay.active {
-      animation: genkidamaPulse 1.2s ease-in-out infinite;
-      opacity: 1;
+    .controls .hint { color: #c9d6e3; font-size: 14px; }
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #4ef0c0, #34b3ff);
+      color: #04131d;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(52, 179, 255, 0.25);
+      transition: transform 0.08s ease, box-shadow 0.1s ease, filter 0.1s ease;
     }
-    @keyframes genkidamaPulse {
-      0% { transform: scale(0.6); opacity: 0.2; }
-      50% { transform: scale(1); opacity: 0.5; }
-      100% { transform: scale(0.6); opacity: 0.2; }
+    button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #dfe9f5;
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    button:active {
+      transform: translateY(1px);
+      filter: brightness(0.95);
+    }
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .key-card {
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .key-card strong { color: var(--accent); }
+    .log {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px;
+      min-height: 80px;
+      font-size: 14px;
+      color: #cfd9e6;
+    }
+    .pulse {
+      animation: pulse 0.18s ease;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    @media (max-width: 760px) {
+      .content { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div id="stage">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlay" width="640" height="480"></canvas>
-    <div id="frame-overlay"></div>
-    <div id="share-bar">
-      <button id="camera-btn" class="share-btn">SWITCH CAMERA</button>
-      <button id="tweet-btn" class="share-btn">SEND TO TWITTER</button>
+  <main class="app">
+    <header>
+      <div>
+        <h1>10秒ジャブ連打チャレンジ</h1>
+        <p>左手と右手のキーを交互に叩いて、10秒間で何発ジャブを打てるか計測しよう！</p>
+      </div>
+    </header>
+    <div class="content">
+      <section class="board" aria-live="polite">
+        <div class="score">
+          <div>
+            <div class="label">合計ジャブ</div>
+            <div id="total" class="value">0</div>
+          </div>
+          <div>
+            <div class="label">残り時間</div>
+            <div id="time" class="value">10.00s</div>
+          </div>
+          <div>
+            <div class="label">ベスト</div>
+            <div id="best" class="value">0</div>
+          </div>
+        </div>
+        <div class="timer">
+          <span>進行状況</span>
+          <div class="bar" aria-hidden="true">
+            <div class="bar-fill" id="bar"></div>
+          </div>
+        </div>
+        <div class="hands">
+          <div class="hand-card" id="left-card">
+            <h3>左ジャブ <kbd>A</kbd> / <kbd>←</kbd></h3>
+            <div class="count" id="left-count">0</div>
+          </div>
+          <div class="hand-card" id="right-card">
+            <h3>右ジャブ <kbd>L</kbd> / <kbd>→</kbd></h3>
+            <div class="count" id="right-count">0</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="start-btn" aria-label="ゲーム開始">10秒スタート</button>
+          <button id="reset-btn" class="secondary" aria-label="リセット">リセット</button>
+        </div>
+        <div class="status">スペースキーでも開始できます。キーを押した瞬間にカウントされます（長押しは1回扱い）。</div>
+        <div class="log" id="log">準備完了。STARTボタンかスペースキーで計測開始！</div>
+      </section>
+      <aside class="board">
+        <h3>遊び方</h3>
+        <div class="camera" id="camera-block">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <div class="controls">
+          <button id="camera-btn" class="secondary" aria-label="カメラを有効化">カメラ許可</button>
+          <div class="hint">TensorFlow MoveNetで手の伸びを検知し、左右のジャブを自動カウントします。</div>
+        </div>
+        <div class="keys">
+          <div class="key-card">左手：<strong>A</strong> / <strong>←</strong> または左手ジャブ検知</div>
+          <div class="key-card">右手：<strong>L</strong> / <strong>→</strong> または右手ジャブ検知</div>
+          <div class="key-card">開始：<strong>スペース</strong> または <strong>ボタン</strong></div>
+          <div class="key-card">停止：<strong>リセット</strong> ボタン</div>
+        </div>
+        <p style="margin:12px 0 0; color:#c9d6e3; font-size:14px;">両肩を映し、拳を前に突き出すとカウントされます。身体を痛めないようウォームアップしてから挑戦してください！</p>
+      </aside>
     </div>
-    <div id="hud">
-      <div class="label">SCOUTER ONLINE</div>
-      <div id="battle-power">BATTLE POWER: -----</div>
-      <div class="label" id="status">Initializing...</div>
-    </div>
-    <div id="blink-indicator"></div>
-    <div id="special-move"></div>
-    <div id="rise-layer"></div>
-    <div id="genkidama-overlay"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js"></script>
   <script>
-    // 日本語コメント: 初期設定で必要なDOM要素と状態を取得
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-    const ctx = canvas.getContext('2d');
-    const battlePowerEl = document.getElementById('battle-power');
-    const statusEl = document.getElementById('status');
-    const blinkIndicator = document.getElementById('blink-indicator');
-    const frameOverlay = document.getElementById('frame-overlay');
-    const specialMoveEl = document.getElementById('special-move');
-    const tweetBtn = document.getElementById('tweet-btn');
+    const totalEl = document.getElementById('total');
+    const timeEl = document.getElementById('time');
+    const bestEl = document.getElementById('best');
+    const barFill = document.getElementById('bar');
+    const leftCountEl = document.getElementById('left-count');
+    const rightCountEl = document.getElementById('right-count');
+    const logEl = document.getElementById('log');
+    const leftCard = document.getElementById('left-card');
+    const rightCard = document.getElementById('right-card');
+    const startBtn = document.getElementById('start-btn');
+    const resetBtn = document.getElementById('reset-btn');
     const cameraBtn = document.getElementById('camera-btn');
-    const riseLayer = document.getElementById('rise-layer');
-    const genkidamaOverlay = document.getElementById('genkidama-overlay');
+    const videoEl = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const ctx = overlay.getContext('2d');
 
-    const MOVENET_EDGES = [
-      [0,1],[0,2],[1,3],[2,4], // 頭部
-      [5,6],[5,7],[7,9],[6,8],[8,10], // 腕
-      [5,11],[6,12],[11,12], // 肩・腰
-      [11,13],[13,15],[12,14],[14,16] // 脚
-    ];
+    const DURATION = 10_000; // 10 seconds
+    let timerId = null;
+    let startTime = null;
+    let left = 0;
+    let right = 0;
+    let best = Number(localStorage.getItem('jab-best') || 0);
+    let running = false;
+    let detector = null;
+    let cameraReady = false;
+    let poseLoopId = null;
+    const jabState = {
+      left: { extended: false, lastPunch: 0 },
+      right: { extended: false, lastPunch: 0 },
+    };
 
-    const GENKIDAMA_HOLD_MS = 60000;
-    const GENKIDAMA_SCORE = 10000000;
-    const IDLE_SCORE = 3;
+    bestEl.textContent = best;
 
-    let detector;
-    let lastScore = IDLE_SCORE;
-    let audioCtx;
-    let flashing = false;
-    let lockAudioCooldown = 0;
-    let currentMove = 'NONE';
-    let moveCooldown = 0;
-    let currentStream;
-    let useEnvironment = false;
-    let lastPoseTime = performance.now();
-    const LOST_TIMEOUT = 2500; // 日本語コメント: 一定時間ポーズ未検知なら戦闘力を3にする
-    let lastFinalScore = IDLE_SCORE;
-    let raiseStartTime = null;
-    let genkidamaActive = false;
+    const handKeys = {
+      left: ['a', 'ArrowLeft'],
+      right: ['l', 'ArrowRight'],
+    };
 
-    updateDisplay(IDLE_SCORE); // 日本語コメント: 初期状態でも数値を表示
-
-    // 日本語コメント: カメラを起動してストリームをvideoに接続
-    async function setupCamera() {
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-      const constraints = {
-        video: {
-          width: 640,
-          height: 480,
-          facingMode: useEnvironment ? { exact: 'environment' } : 'user'
-        }
-      };
-      try {
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (err) {
-        if (useEnvironment) {
-          useEnvironment = false;
-          return setupCamera();
-        }
-        throw err;
-      }
-      video.srcObject = currentStream;
-      await new Promise((resolve) => video.onloadedmetadata = resolve);
-    }
-
-    // 日本語コメント: MoveNet Lightningを読み込んで検出器を生成
-    async function loadDetector() {
-      detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-        enableSmoothing: true,
-      });
-    }
-
-    // 日本語コメント: バトルパワーを算出
-    function computeBattlePower(keypoints) {
-      const validPoints = keypoints.filter(kp => kp.score && kp.score > 0.3);
-      if (!validPoints.length) return 0;
-
-      const avgConfidence = validPoints.reduce((acc, kp) => acc + kp.score, 0) / validPoints.length;
-
-      const leftShoulder = keypoints.find(kp => kp.name === 'left_shoulder');
-      const rightShoulder = keypoints.find(kp => kp.name === 'right_shoulder');
-      const leftHip = keypoints.find(kp => kp.name === 'left_hip');
-      const rightHip = keypoints.find(kp => kp.name === 'right_hip');
-      const nose = keypoints.find(kp => kp.name === 'nose');
-      const fallbackHipY = (leftShoulder && rightShoulder)
-        ? Math.max(leftShoulder.y, rightShoulder.y) + 80
-        : canvas.height * 0.65;
-      const fallbackHipX = (leftShoulder && rightShoulder)
-        ? (leftShoulder.x + rightShoulder.x) / 2
-        : canvas.width / 2;
-
-      let balanceScore = 0;
-      if (leftShoulder && rightShoulder) {
-        const shoulderDiff = Math.abs(leftShoulder.x - rightShoulder.x);
-        const hipDiff = (leftHip && rightHip)
-          ? Math.abs(leftHip.x - rightHip.x)
-          : shoulderDiff * 0.8;
-        const normalized = (shoulderDiff + hipDiff) / (canvas.width * 0.5);
-        balanceScore = Math.max(0, 1 - Math.min(normalized, 1));
-      }
-
-      let verticalScore = 0;
-      if (nose) {
-        const midHipX = (leftHip && rightHip) ? (leftHip.x + rightHip.x) / 2 : fallbackHipX;
-        const midHipY = (leftHip && rightHip) ? (leftHip.y + rightHip.y) / 2 : fallbackHipY;
-        const dy = Math.abs(nose.y - midHipY);
-        const dx = Math.abs(nose.x - midHipX);
-        const ratio = dx / (dy + 1);
-        verticalScore = Math.max(0, 1 - Math.min(ratio, 1));
-      }
-
-      const rawScore = (avgConfidence * 200000) + (balanceScore * 200000) + (verticalScore * 130000);
-      return Math.min(530000, Math.floor(rawScore));
-    }
-
-    // 日本語コメント: 数値表示を滑らかにアニメーション
-    function animateCounter(target) {
-      const duration = 180;
-      const frames = Math.max(1, Math.round(duration / 16));
-      const delta = (target - lastScore) / frames;
-      let currentFrame = 0;
-      function step() {
-        if (currentFrame >= frames) {
-          lastScore = target;
-          updateDisplay(target);
-          if (target > lastFinalScore) {
-            spawnRise(target - lastFinalScore);
-          }
-          lastFinalScore = target;
-          return;
-        }
-        lastScore += delta;
-        updateDisplay(Math.floor(lastScore));
-        currentFrame += 1;
-        requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
-
-    // 日本語コメント: 表示更新とエフェクト同期
-    function updateDisplay(score) {
-      if (genkidamaActive) {
-        battlePowerEl.textContent = 'BATTLE POWER: >10000000 (MEASUREMENT ERROR)';
-      } else {
-        battlePowerEl.textContent = `BATTLE POWER: ${score.toString().padStart(5, '0')}`;
-      }
-      const scale = genkidamaActive ? 1.4 : 1 + Math.min(score / 530000, 0.3);
-      battlePowerEl.style.transform = `scale(${scale})`;
-      const highPower = !genkidamaActive && score > 500000;
-      battlePowerEl.classList.toggle('flash', highPower);
-      blinkIndicator.classList.toggle('active', highPower || genkidamaActive);
-      battlePowerEl.style.textShadow = genkidamaActive
-        ? '0 0 20px #fff29c, 0 0 40px #ffdd6e'
-        : '';
-      if (highPower && !flashing) {
-        flashing = true;
-        playBeep();
-        setTimeout(() => flashing = false, 600);
+    function updateCounts() {
+      const total = left + right;
+      totalEl.textContent = total;
+      leftCountEl.textContent = left;
+      rightCountEl.textContent = right;
+      if (total > best) {
+        best = total;
+        bestEl.textContent = best;
+        localStorage.setItem('jab-best', best);
+        log(`記録更新！ ${best} ジャブ`);
       }
     }
 
-    // 日本語コメント: Web Audio APIで電子音を生成
-    function playBeep(multiplier = 1) {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 900 * multiplier;
-      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.27);
+    function setTime(ms) {
+      const seconds = Math.max(0, ms / 1000);
+      timeEl.textContent = `${seconds.toFixed(2)}s`;
+      const progress = Math.min(1, (DURATION - ms) / DURATION);
+      barFill.style.width = `${progress * 100}%`;
     }
 
-    // 日本語コメント: キーポイントを描画してネオングリーン骨格を形成
+    function log(message) {
+      logEl.textContent = message;
+    }
+
+    function pulse(el) {
+      el.classList.remove('pulse');
+      void el.offsetWidth;
+      el.classList.add('pulse');
+    }
+
+    function startGame() {
+      if (running) return;
+      if (!detector || !cameraReady) {
+        log('カメラとモデルを準備中です…');
+      }
+      running = true;
+      left = 0;
+      right = 0;
+      updateCounts();
+      startTime = performance.now();
+      setTime(DURATION);
+      log('計測中！リズムよくジャブを打とう！');
+      timerId = requestAnimationFrame(tick);
+    }
+
+    function endGame() {
+      if (!running) return;
+      running = false;
+      if (timerId) cancelAnimationFrame(timerId);
+      timerId = null;
+      setTime(0);
+      log(`結果: 合計 ${left + right} ジャブ。もう一度挑戦しよう！`);
+    }
+
+    function resetGame() {
+      if (timerId) cancelAnimationFrame(timerId);
+      running = false;
+      left = 0;
+      right = 0;
+      startTime = null;
+      setTime(DURATION);
+      updateCounts();
+      log('準備完了。STARTボタンかスペースキーで計測開始！');
+    }
+
+    function tick(now) {
+      const elapsed = now - startTime;
+      const remaining = Math.max(0, DURATION - elapsed);
+      setTime(remaining);
+      if (remaining <= 0) {
+        endGame();
+        return;
+      }
+      timerId = requestAnimationFrame(tick);
+    }
+
+    function handlePunch(key) {
+      if (!running) return;
+      if (handKeys.left.includes(key)) {
+        left += 1;
+        updateCounts();
+        pulse(leftCard);
+      } else if (handKeys.right.includes(key)) {
+        right += 1;
+        updateCounts();
+        pulse(rightCard);
+      }
+    }
+
     function drawKeypoints(keypoints) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#00ff88';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      const edges = MOVENET_EDGES;
-
-      ctx.beginPath();
-      edges.forEach(([aIndex, bIndex]) => {
-        const a = keypoints[aIndex];
-        const b = keypoints[bIndex];
-        if (a.score > 0.3 && b.score > 0.3) {
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-        }
-      });
-      ctx.stroke();
-
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      ctx.strokeStyle = 'rgba(78, 240, 192, 0.7)';
+      ctx.lineWidth = 4;
       keypoints.forEach((kp) => {
-        if (kp.score > 0.3) {
-          ctx.fillStyle = '#2fff92';
-          ctx.beginPath();
-          ctx.arc(kp.x, kp.y, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        if (kp.score < 0.3) return;
+        ctx.beginPath();
+        ctx.arc(kp.x, kp.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = kp.name?.includes('right') ? '#ff6b9a' : '#4ef0c0';
+        ctx.fill();
       });
     }
 
-    // 日本語コメント: 推論ループを実行
-    async function renderLoop() {
-      const poses = await detector.estimatePoses(video, { maxPoses: 1, flipHorizontal: false });
-      if (poses[0]) {
-        lastPoseTime = performance.now();
-        triggerLockAnimation();
-        drawKeypoints(poses[0].keypoints);
-        const score = genkidamaActive ? GENKIDAMA_SCORE : computeBattlePower(poses[0].keypoints);
-        animateCounter(score);
-        if (genkidamaActive) {
-          statusEl.textContent = 'MEASUREMENT OVERFLOW';
-        } else if (!raiseStartTime) {
-          statusEl.textContent = 'TARGET LOCKED';
-        }
-        detectSpecialMove(poses[0].keypoints, score);
-      } else {
-        frameOverlay.classList.remove('active');
-        statusEl.textContent = 'SEARCHING...';
-        if (!genkidamaActive) {
-          specialMoveEl.classList.remove('active');
-          specialMoveEl.textContent = '';
-        }
-        resetGenkidama(true);
-        raiseStartTime = null;
-        if (performance.now() - lastPoseTime > LOST_TIMEOUT && lastScore !== IDLE_SCORE) {
-          animateCounter(IDLE_SCORE);
-        }
-      }
-      requestAnimationFrame(renderLoop);
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
-    // 日本語コメント: ロック時の枠と電子音アニメーションを管理
-    function triggerLockAnimation() {
-      frameOverlay.classList.add('active');
-      if (!audioCtx) return;
-      if (performance.now() - lockAudioCooldown > 900) {
-        lockAudioCooldown = performance.now();
-        playBeep(1.1);
-        setTimeout(() => playBeep(1.4), 160);
-        setTimeout(() => playBeep(1.8), 320);
-      }
-    }
-
-    // 日本語コメント: ポーズ別必殺技演出を検知
-    function detectSpecialMove(keypoints, score) {
-      const now = performance.now();
-      const leftWrist = keypoints.find(kp => kp.name === 'left_wrist');
-      const rightWrist = keypoints.find(kp => kp.name === 'right_wrist');
-      const leftShoulder = keypoints.find(kp => kp.name === 'left_shoulder');
-      const rightShoulder = keypoints.find(kp => kp.name === 'right_shoulder');
-      const leftElbow = keypoints.find(kp => kp.name === 'left_elbow');
-      const rightElbow = keypoints.find(kp => kp.name === 'right_elbow');
-
-      const armsRaised = leftWrist && rightWrist && leftShoulder && rightShoulder &&
-        leftWrist.y < leftShoulder.y - 20 && rightWrist.y < rightShoulder.y - 20;
-
-      handleGenkidamaCharge(armsRaised);
-      if (genkidamaActive) {
-        specialMoveEl.textContent = 'GENKIDAMA MAX!!';
-        specialMoveEl.classList.add('active');
-        return;
-      }
-
-      if (now - moveCooldown < 800) return;
-
-      const guardPose = leftElbow && rightElbow && leftShoulder && rightShoulder &&
-        Math.abs(leftElbow.x - rightElbow.x) < 80 &&
-        leftElbow.y < leftShoulder.y + 40 && rightElbow.y < rightShoulder.y + 40;
-
-      const punchPose = rightWrist && rightElbow && rightShoulder &&
-        rightWrist.x - rightShoulder.x > 120 &&
-        Math.abs(rightWrist.y - rightShoulder.y) < 80;
-
-      let nextMove = 'NONE';
-      if (armsRaised) {
-        nextMove = 'KAMEHAMEHA CHARGE';
-      } else if (punchPose) {
-        nextMove = 'GALICK GUN AIM';
-      } else if (guardPose) {
-        nextMove = 'SPIRIT SHIELD';
-      }
-
-      if (nextMove !== 'NONE' && nextMove !== currentMove) {
-        currentMove = nextMove;
-        moveCooldown = now;
-        specialMoveEl.textContent = nextMove;
-        specialMoveEl.classList.add('active');
-        burstEffect(score);
-      } else if (nextMove === 'NONE') {
-        currentMove = 'NONE';
-        specialMoveEl.classList.remove('active');
-      }
-    }
-
-    // 日本語コメント: 元気玉チャージを監視
-    function handleGenkidamaCharge(armsRaised) {
-      const now = performance.now();
-      if (genkidamaActive) {
-        if (!armsRaised) resetGenkidama();
-        return;
-      }
-      if (armsRaised) {
-        if (!raiseStartTime) {
-          raiseStartTime = now;
-          statusEl.textContent = 'GENKIDAMA CHARGING...';
-        }
-        const elapsed = now - raiseStartTime;
-        if (elapsed >= GENKIDAMA_HOLD_MS) {
-          triggerGenkidama();
+    function detectJab(side, wrist, shoulder, hip, timestamp) {
+      if (!wrist || !shoulder || !hip) return;
+      if (wrist.score < 0.3 || shoulder.score < 0.3 || hip.score < 0.3) return;
+      const ref = distance(shoulder, hip) || 1;
+      const arm = distance(wrist, shoulder) / ref;
+      const extended = arm > 1.15;
+      const state = jabState[side];
+      const cooldown = 220;
+      if (extended && !state.extended && timestamp - state.lastPunch > cooldown) {
+        if (side === 'left') {
+          left += 1;
+          pulse(leftCard);
         } else {
-          const percent = Math.min(100, Math.floor((elapsed / GENKIDAMA_HOLD_MS) * 100));
-          statusEl.textContent = `GENKIDAMA ${percent}%`;
+          right += 1;
+          pulse(rightCard);
         }
-      } else if (raiseStartTime) {
-        raiseStartTime = null;
-        statusEl.textContent = 'TARGET LOCKED';
+        state.lastPunch = timestamp;
+        updateCounts();
       }
+      state.extended = extended;
     }
 
-    // 日本語コメント: 元気玉を発動させる
-    function triggerGenkidama() {
-      genkidamaActive = true;
-      raiseStartTime = null;
-      genkidamaOverlay.classList.add('active');
-      frameOverlay.classList.add('active');
-      specialMoveEl.textContent = 'GENKIDAMA MAX!!';
-      specialMoveEl.classList.add('active');
-      statusEl.textContent = 'MEASUREMENT OVERFLOW';
-      playGenkidamaChord();
-      animateCounter(GENKIDAMA_SCORE);
-    }
-
-    // 日本語コメント: 元気玉状態を解除
-    function resetGenkidama(keepStatus = false) {
-      if (!genkidamaActive) {
-        genkidamaOverlay.classList.remove('active');
+    async function poseLoop() {
+      if (!detector || videoEl.readyState < 2) {
+        poseLoopId = requestAnimationFrame(poseLoop);
         return;
       }
-      genkidamaActive = false;
-      genkidamaOverlay.classList.remove('active');
-      specialMoveEl.classList.remove('active');
-      specialMoveEl.textContent = '';
-      if (!keepStatus) statusEl.textContent = 'TARGET LOCKED';
-    }
-
-    // 日本語コメント: 元気玉用の電子音シーケンス
-    function playGenkidamaChord() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      [1.2, 1.6, 2.1].forEach((mult, idx) => {
-        setTimeout(() => playBeep(mult), idx * 200);
-      });
-    }
-
-    // 日本語コメント: スコア増加時の上昇アニメーションを表示
-    function spawnRise(delta) {
-      if (delta < 10) return;
-      const rise = document.createElement('div');
-      rise.className = 'rise-text';
-      rise.textContent = `+${delta}`;
-      riseLayer.appendChild(rise);
-      setTimeout(() => rise.remove(), 1000);
-    }
-
-    // 日本語コメント: 必殺技演出時のエフェクトと電子音
-    function burstEffect(score) {
-      if (genkidamaActive) return;
-      frameOverlay.classList.add('active');
-      if (!audioCtx) playBeep();
-      setTimeout(() => playBeep(1.6), 120);
-      setTimeout(() => playBeep(2.0), 260);
-      canvas.classList.add('burst');
-      canvas.style.filter = 'drop-shadow(0 0 12px #53ffbd)';
-      setTimeout(() => {
-        canvas.style.filter = '';
-        if (!genkidamaActive) {
-          specialMoveEl.classList.remove('active');
+      const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
+      const ts = performance.now();
+      if (poses[0]?.keypoints) {
+        const kp = Object.fromEntries(poses[0].keypoints.map((p) => [p.name, p]));
+        overlay.width = videoEl.videoWidth;
+        overlay.height = videoEl.videoHeight;
+        drawKeypoints(poses[0].keypoints);
+        if (running) {
+          detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
+          detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
         }
-      }, 1400);
-      if (score < 450000) {
-        lastScore = Math.max(lastScore, score + 20000);
       }
+      poseLoopId = requestAnimationFrame(poseLoop);
     }
 
-    // 日本語コメント: メイン処理を起動
-    async function init() {
+    async function initDetector() {
+      if (detector) return detector;
+      await tf.setBackend('webgl');
+      detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+      );
+      log('モデル読み込み完了。肩から拳が見えるようにカメラを調整してください。');
+      return detector;
+    }
+
+    async function initCamera() {
+      if (cameraReady) return;
       try {
-        statusEl.textContent = 'BOOTING...';
-        await setupCamera();
-        await loadDetector();
-        statusEl.textContent = 'SCANNING...';
-        setupShare();
-        setupCameraSwitch();
-        renderLoop();
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = 'CAMERA ERROR';
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+        cameraReady = true;
+        log('カメラ準備OK！肩と拳が映る位置でスタンバイ。');
+        await initDetector();
+        poseLoop();
+      } catch (e) {
+        console.error(e);
+        log('カメラの許可が必要です。ブラウザ設定を確認してください。');
       }
     }
 
-    // 日本語コメント: ツイートボタンを設定
-    function setupShare() {
-      tweetBtn.addEventListener('click', () => {
-        const scoreText = battlePowerEl.textContent.replace('BATTLE POWER: ', '');
-        const text = encodeURIComponent(`戦闘力 ${scoreText} !! #KGNINJA`);
-        const url = encodeURIComponent('https://kg-ninja.github.io/DGscouter/');
-        const tweetUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
-        window.open(tweetUrl, '_blank');
-      });
-    }
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!running) startGame();
+        return;
+      }
+      handlePunch(e.key);
+    });
 
-    // 日本語コメント: 背面/前面カメラ切替ボタン
-    function setupCameraSwitch() {
-      cameraBtn.addEventListener('click', async () => {
-        useEnvironment = !useEnvironment;
-        cameraBtn.textContent = useEnvironment ? 'USE FRONT CAMERA' : 'SWITCH CAMERA';
-        statusEl.textContent = useEnvironment ? 'ENV CAMERA...' : 'FRONT CAMERA...';
-        try {
-          await setupCamera();
-          statusEl.textContent = 'SCANNING...';
-        } catch (err) {
-          statusEl.textContent = 'CAMERA ERROR';
-          console.error(err);
-        }
+    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', resetGame);
+    cameraBtn.addEventListener('click', () => {
+      cameraBtn.disabled = true;
+      cameraBtn.textContent = '準備中...';
+      initCamera().finally(() => {
+        cameraBtn.textContent = cameraReady ? 'カメラ稼働中' : 'カメラ許可';
+        cameraBtn.disabled = cameraReady;
       });
-    }
+    });
 
-    init();
+    setTime(DURATION);
   </script>
 </body>
 </html>
