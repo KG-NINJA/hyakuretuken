@@ -52,7 +52,7 @@
     }
     .content {
       display: grid;
-      grid-template-columns: 1fr 280px;
+      grid-template-columns: 1.1fr 0.9fr;
       gap: 16px;
       padding: 20px 24px 24px;
     }
@@ -64,6 +64,25 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+    }
+    .camera {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #03060f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 260px;
+    }
+    video, canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .camera canvas {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
     }
     .score {
       display: grid;
@@ -148,6 +167,7 @@
       flex-wrap: wrap;
       margin-top: 8px;
     }
+    .controls .hint { color: #c9d6e3; font-size: 14px; }
     button {
       appearance: none;
       border: none;
@@ -254,16 +274,27 @@
       </section>
       <aside class="board">
         <h3>遊び方</h3>
+        <div class="camera" id="camera-block">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <div class="controls">
+          <button id="camera-btn" class="secondary" aria-label="カメラを有効化">カメラ許可</button>
+          <div class="hint">TensorFlow MoveNetで手の伸びを検知し、左右のジャブを自動カウントします。</div>
+        </div>
         <div class="keys">
-          <div class="key-card">左手：<strong>A</strong> または <strong>←</strong></div>
-          <div class="key-card">右手：<strong>L</strong> または <strong>→</strong></div>
+          <div class="key-card">左手：<strong>A</strong> / <strong>←</strong> または左手ジャブ検知</div>
+          <div class="key-card">右手：<strong>L</strong> / <strong>→</strong> または右手ジャブ検知</div>
           <div class="key-card">開始：<strong>スペース</strong> または <strong>ボタン</strong></div>
           <div class="key-card">停止：<strong>リセット</strong> ボタン</div>
         </div>
-        <p style="margin:12px 0 0; color:#c9d6e3; font-size:14px;">できるだけ両手を交互に動かし、リズムを崩さずに連打すると高記録が狙えます。身体を痛めないように、ウォームアップしてから挑戦してください！</p>
+        <p style="margin:12px 0 0; color:#c9d6e3; font-size:14px;">両肩を映し、拳を前に突き出すとカウントされます。身体を痛めないようウォームアップしてから挑戦してください！</p>
       </aside>
     </div>
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js"></script>
   <script>
     const totalEl = document.getElementById('total');
     const timeEl = document.getElementById('time');
@@ -276,6 +307,10 @@
     const rightCard = document.getElementById('right-card');
     const startBtn = document.getElementById('start-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const cameraBtn = document.getElementById('camera-btn');
+    const videoEl = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const ctx = overlay.getContext('2d');
 
     const DURATION = 10_000; // 10 seconds
     let timerId = null;
@@ -284,6 +319,13 @@
     let right = 0;
     let best = Number(localStorage.getItem('jab-best') || 0);
     let running = false;
+    let detector = null;
+    let cameraReady = false;
+    let poseLoopId = null;
+    const jabState = {
+      left: { extended: false, lastPunch: 0 },
+      right: { extended: false, lastPunch: 0 },
+    };
 
     bestEl.textContent = best;
 
@@ -324,6 +366,9 @@
 
     function startGame() {
       if (running) return;
+      if (!detector || !cameraReady) {
+        log('カメラとモデルを準備中です…');
+      }
       running = true;
       left = 0;
       right = 0;
@@ -378,6 +423,92 @@
       }
     }
 
+    function drawKeypoints(keypoints) {
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      ctx.strokeStyle = 'rgba(78, 240, 192, 0.7)';
+      ctx.lineWidth = 4;
+      keypoints.forEach((kp) => {
+        if (kp.score < 0.3) return;
+        ctx.beginPath();
+        ctx.arc(kp.x, kp.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = kp.name?.includes('right') ? '#ff6b9a' : '#4ef0c0';
+        ctx.fill();
+      });
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function detectJab(side, wrist, shoulder, hip, timestamp) {
+      if (!wrist || !shoulder || !hip) return;
+      if (wrist.score < 0.3 || shoulder.score < 0.3 || hip.score < 0.3) return;
+      const ref = distance(shoulder, hip) || 1;
+      const arm = distance(wrist, shoulder) / ref;
+      const extended = arm > 1.15;
+      const state = jabState[side];
+      const cooldown = 220;
+      if (extended && !state.extended && timestamp - state.lastPunch > cooldown) {
+        if (side === 'left') {
+          left += 1;
+          pulse(leftCard);
+        } else {
+          right += 1;
+          pulse(rightCard);
+        }
+        state.lastPunch = timestamp;
+        updateCounts();
+      }
+      state.extended = extended;
+    }
+
+    async function poseLoop() {
+      if (!detector || videoEl.readyState < 2) {
+        poseLoopId = requestAnimationFrame(poseLoop);
+        return;
+      }
+      const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
+      const ts = performance.now();
+      if (poses[0]?.keypoints) {
+        const kp = Object.fromEntries(poses[0].keypoints.map((p) => [p.name, p]));
+        overlay.width = videoEl.videoWidth;
+        overlay.height = videoEl.videoHeight;
+        drawKeypoints(poses[0].keypoints);
+        if (running) {
+          detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
+          detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
+        }
+      }
+      poseLoopId = requestAnimationFrame(poseLoop);
+    }
+
+    async function initDetector() {
+      if (detector) return detector;
+      await tf.setBackend('webgl');
+      detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+      );
+      log('モデル読み込み完了。肩から拳が見えるようにカメラを調整してください。');
+      return detector;
+    }
+
+    async function initCamera() {
+      if (cameraReady) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+        cameraReady = true;
+        log('カメラ準備OK！肩と拳が映る位置でスタンバイ。');
+        await initDetector();
+        poseLoop();
+      } catch (e) {
+        console.error(e);
+        log('カメラの許可が必要です。ブラウザ設定を確認してください。');
+      }
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       if (e.code === 'Space') {
@@ -390,6 +521,14 @@
 
     startBtn.addEventListener('click', startGame);
     resetBtn.addEventListener('click', resetGame);
+    cameraBtn.addEventListener('click', () => {
+      cameraBtn.disabled = true;
+      cameraBtn.textContent = '準備中...';
+      initCamera().finally(() => {
+        cameraBtn.textContent = cameraReady ? 'カメラ稼働中' : 'カメラ許可';
+        cameraBtn.disabled = cameraReady;
+      });
+    });
 
     setTime(DURATION);
   </script>

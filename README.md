@@ -1,25 +1,18 @@
-# Dragon Ball Scouter HUD (TensorFlow.js)
+# 10秒ジャブ連打チャレンジ
 
-A single-page web experience that emulates a Dragon Ball-style scouter using TensorFlow.js MoveNet Lightning to estimate a single human pose and visualize battle power in real time.
+TensorFlow MoveNetでウェブカメラから肩と手首の動きを検出し、10秒間のジャブ回数を自動カウントするブラウザゲームです。キーボード操作も併用でき、自己ベストはローカルストレージに保存されます。
 
-## Features
-- Live webcam feed at 640×480 with neon red HUD frame and green targeting overlay.
-- MoveNet Lightning detector from `@tensorflow-models/pose-detection` running fully client-side.
-- Neon-green skeleton rendering plus animated frame that pulses when a target is locked.
-- Battle Power calculation capped at 530,000 using:
-  - average pose confidence
-  - left/right balance symmetry
-  - vertical alignment of the spine (with upper-body fallback)
-- Audio/visual feedback:
-  - “pip pip” lock-on tones when a subject is detected
-  - high-score flashing HUD and beep burst beyond 500,000
-  - special move banners: raise arms for “KAMEHAMEHA CHARGE,” extend right arm for “GALICK GUN AIM,” guard pose for “SPIRIT SHIELD”
-- Tweet button sharing the current battle power with `#KGNINJA` and linking to `https://kg-ninja.github.io/DGscouter/`.
+## 主な特徴
+- 10秒カウントダウンと進捗バーでテンポ良く遊べるジャブ計測ゲーム
+- MoveNet (tensorflow-models/pose-detection) を用いた左右ジャブの自動検知と可視化
+- A / ← が左、L / → が右のキーボード入力にも対応し、スペースキーまたはボタンで開始
+- 合計・左右別カウントとベスト記録の表示、ローカル保存
+- モダンブラウザのみで完結。追加インストール不要
 
-## Usage
-1. Serve or open `index.html` in a modern browser (Chrome/Edge recommended).
-2. Allow webcam access when prompted.
-3. Strike different poses to trigger lock-on, battle power readouts, and special move animations.
-4. Click **SEND TO TWITTER** to post your current reading.
+## 遊び方
+1. ブラウザで `index.html` を開き、右側の「カメラ許可」ボタンを押してウェブカメラへのアクセスを許可します。
+2. 肩と拳が映る位置に立ち、スペースキーまたは「10秒スタート」ボタンで計測を開始します。
+3. 拳を前に突き出す動きを左右交互に繰り返すと、自動でジャブ回数がカウントされます（キーボード入力でも加算可能）。
+4. 10秒後に合計と左右別の結果が表示されます。ベスト記録はブラウザに保存され、リセットボタンで再挑戦できます。
 
-All inference and rendering are done locally; no backend services are required.
+安全のためウォームアップを行い、周囲に十分なスペースを確保してからプレイしてください。
