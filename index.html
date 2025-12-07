@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,7 +13,11 @@
       --accent: #4ef0c0;
       --accent-2: #ff6b9a;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -24,6 +29,7 @@
       justify-content: center;
       padding: 24px;
     }
+
     .app {
       width: min(920px, 100%);
       background: var(--panel);
@@ -33,6 +39,7 @@
       overflow: hidden;
       backdrop-filter: blur(6px);
     }
+
     header {
       padding: 20px 24px;
       display: flex;
@@ -40,22 +47,26 @@
       gap: 16px;
       background: linear-gradient(135deg, rgba(78, 240, 192, 0.18), rgba(255, 107, 154, 0.2));
     }
+
     header h1 {
       margin: 0;
       font-size: 24px;
       letter-spacing: 0.04em;
     }
+
     header p {
       margin: 4px 0 0;
       color: #cdd9e5;
       font-size: 14px;
     }
+
     .content {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 16px;
       padding: 20px 24px 24px;
     }
+
     .board {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -65,6 +76,7 @@
       flex-direction: column;
       gap: 12px;
     }
+
     .camera {
       position: relative;
       border-radius: 12px;
@@ -74,43 +86,52 @@
       min-height: 260px;
       isolation: isolate;
     }
-    video, canvas {
+
+    video,
+    canvas {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: cover;
     }
+
     .camera canvas {
       position: absolute;
       inset: 0;
       pointer-events: none;
     }
+
     .score {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       text-align: center;
     }
+
     .score div {
       background: rgba(255, 255, 255, 0.04);
       border-radius: 10px;
       padding: 12px;
       border: 1px solid rgba(255, 255, 255, 0.04);
     }
+
     .score .label {
       font-size: 14px;
       color: #c9d6e3;
     }
+
     .score .value {
       font-size: 34px;
       margin-top: 6px;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
     }
+
     .status {
       font-size: 15px;
       color: #c9d6e3;
     }
+
     .timer {
       display: flex;
       align-items: center;
@@ -118,6 +139,7 @@
       font-size: 16px;
       color: #cde6ff;
     }
+
     .bar {
       flex: 1;
       height: 10px;
@@ -126,23 +148,27 @@
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
+
     .bar-fill {
       height: 100%;
       width: 0;
       background: linear-gradient(90deg, var(--accent), var(--accent-2));
       transition: width 0.1s ease-out;
     }
+
     .hands {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 12px;
     }
+
     .hand-card {
       background: rgba(255, 255, 255, 0.03);
       border-radius: 10px;
       padding: 12px;
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
+
     .hand-card h3 {
       margin: 0 0 4px;
       display: flex;
@@ -150,11 +176,13 @@
       gap: 8px;
       font-size: 16px;
     }
+
     .hand-card .count {
       font-size: 28px;
       margin: 6px 0 0;
       font-variant-numeric: tabular-nums;
     }
+
     .hand-card kbd {
       display: inline-block;
       padding: 4px 8px;
@@ -166,13 +194,19 @@
       min-width: 28px;
       text-align: center;
     }
+
     .controls {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       margin-top: 8px;
     }
-    .controls .hint { color: #c9d6e3; font-size: 14px; }
+
+    .controls .hint {
+      color: #c9d6e3;
+      font-size: 14px;
+    }
+
     button {
       appearance: none;
       border: none;
@@ -187,32 +221,41 @@
       box-shadow: 0 8px 16px rgba(52, 179, 255, 0.25);
       transition: transform 0.08s ease, box-shadow 0.1s ease, filter 0.1s ease;
     }
+
     button.secondary {
       background: rgba(255, 255, 255, 0.08);
       color: #dfe9f5;
       box-shadow: none;
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
+
     button:active {
       transform: translateY(1px);
       filter: brightness(0.95);
     }
+
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
+
     .keys {
       display: grid;
       grid-template-columns: repeat(2, minmax(120px, 1fr));
       gap: 12px;
     }
+
     .key-card {
       border: 1px dashed rgba(255, 255, 255, 0.2);
       border-radius: 10px;
       padding: 10px 12px;
       font-size: 13px;
     }
-    .key-card strong { color: var(--accent); }
+
+    .key-card strong {
+      color: var(--accent);
+    }
+
     .log {
       background: rgba(255, 255, 255, 0.02);
       border-radius: 10px;
@@ -222,12 +265,14 @@
       font-size: 14px;
       color: #cfd9e6;
     }
+
     .badge-row {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       margin-top: 8px;
     }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -238,6 +283,7 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(255, 255, 255, 0.05);
     }
+
     .dot {
       width: 10px;
       height: 10px;
@@ -245,21 +291,43 @@
       background: #ffb347;
       box-shadow: 0 0 0 4px rgba(255, 179, 71, 0.15);
     }
-    .dot.ok { background: #4ef0c0; box-shadow: 0 0 0 4px rgba(78, 240, 192, 0.15); }
-    .dot.warn { background: #ff6b9a; box-shadow: 0 0 0 4px rgba(255, 107, 154, 0.15); }
+
+    .dot.ok {
+      background: #4ef0c0;
+      box-shadow: 0 0 0 4px rgba(78, 240, 192, 0.15);
+    }
+
+    .dot.warn {
+      background: #ff6b9a;
+      box-shadow: 0 0 0 4px rgba(255, 107, 154, 0.15);
+    }
+
     .pulse {
       animation: pulse 0.18s ease;
     }
+
     @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
+
     @media (max-width: 760px) {
-      .content { grid-template-columns: 1fr; }
+      .content {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
   <main class="app">
     <header>
@@ -333,33 +401,13 @@
     </div>
   </main>
 
-  <script>
-    // スクリプト動的読み込み
-    async function loadScripts() {
-      const scripts = [
-        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js',
-        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js',
-        'https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js'
-      ];
-      
-      for (const src of scripts) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.onload = resolve;
-          script.onerror = () => {
-            console.error('Failed to load:', src);
-            resolve();
-          };
-          document.head.appendChild(script);
-        });
-      }
-    }
-    
-    window.scriptsReady = loadScripts();
-  </script>
 
-  <script>
+
+  <script type="module">
+    // MediaPipeモジュールのインポート
+    import { PoseLandmarker, FilesetResolver, DrawingUtils } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+
+    // DOM要素の取得
     const totalEl = document.getElementById('total');
     const timeEl = document.getElementById('time');
     const bestEl = document.getElementById('best');
@@ -382,6 +430,7 @@
     const poseDot = document.getElementById('pose-dot');
     const poseStatus = document.getElementById('pose-status');
 
+    // ゲーム設定
     const DURATION = 10000;
     let timerId = null;
     let startTime = null;
@@ -389,22 +438,47 @@
     let right = 0;
     let best = 0;
     let running = false;
-    let detector = null;
+    let poseLandmarker = null;
     let cameraReady = false;
     let poseLoopId = null;
     let lastPoseTs = 0;
-    let pairs = [];
+    let drawingUtils = null;
+
+    // ジャブ検出状態
     const jabState = {
       left: { extended: false, lastPunch: 0 },
       right: { extended: false, lastPunch: 0 },
     };
 
+    // MediaPipe ランドマークのインデックス
+    const LANDMARKS = {
+      LEFT_SHOULDER: 11,
+      RIGHT_SHOULDER: 12,
+      LEFT_ELBOW: 13,
+      RIGHT_ELBOW: 14,
+      LEFT_WRIST: 15,
+      RIGHT_WRIST: 16,
+      LEFT_HIP: 23,
+      RIGHT_HIP: 24
+    };
+
+    // ボーン接続定義（スケルトン描画用）
+    const POSE_CONNECTIONS = [
+      [11, 12], // 両肩
+      [11, 13], [13, 15], // 左腕
+      [12, 14], [14, 16], // 右腕
+      [11, 23], [12, 24], // 胴体
+      [23, 24] // 腰
+    ];
+
+    // バッジ更新
     function updateBadge(dot, label, message, state = 'ok') {
       dot.classList.toggle('ok', state === 'ok');
       dot.classList.toggle('warn', state === 'warn');
       label.textContent = message;
     }
 
+    // カウント更新
     function updateCounts() {
       const total = left + right;
       totalEl.textContent = total;
@@ -417,6 +491,7 @@
       }
     }
 
+    // タイマー表示更新
     function setTime(ms) {
       const seconds = Math.max(0, ms / 1000);
       timeEl.textContent = `${seconds.toFixed(2)}s`;
@@ -424,16 +499,19 @@
       barFill.style.width = `${progress * 100}%`;
     }
 
+    // ログ表示
     function log(message) {
       logEl.textContent = message;
     }
 
+    // パルスアニメーション
     function pulse(el) {
       el.classList.remove('pulse');
       void el.offsetWidth;
       el.classList.add('pulse');
     }
 
+    // ゲーム開始
     function startGame() {
       if (running) return;
       running = true;
@@ -446,6 +524,7 @@
       timerId = requestAnimationFrame(tick);
     }
 
+    // ゲーム終了
     function endGame() {
       if (!running) return;
       running = false;
@@ -455,6 +534,7 @@
       log(`結果: 合計 ${left + right} ジャブ。もう一度挑戦しよう！`);
     }
 
+    // ゲームリセット
     function resetGame() {
       if (timerId) cancelAnimationFrame(timerId);
       running = false;
@@ -466,6 +546,7 @@
       log('準備完了。STARTボタンかスペースキーで計測開始！');
     }
 
+    // フレームごとのタイマー更新
     function tick(now) {
       const elapsed = now - startTime;
       const remaining = Math.max(0, DURATION - elapsed);
@@ -477,6 +558,7 @@
       timerId = requestAnimationFrame(tick);
     }
 
+    // キーボードでのパンチ処理
     function handlePunch(key) {
       if (!running) return;
       const k = key.toLowerCase();
@@ -491,41 +573,82 @@
       }
     }
 
-    function drawPose(pose) {
+    // ポーズ描画（MediaPipe ランドマーク用）
+    function drawPose(landmarks) {
       ctx.clearRect(0, 0, overlay.width, overlay.height);
-      if (!pose?.keypoints) return;
-      const keypoints = pose.keypoints.filter((kp) => kp.score >= 0.3);
+      if (!landmarks || landmarks.length === 0) return;
+
+      const w = overlay.width;
+      const h = overlay.height;
+
+      // ボーン（接続線）を描画
       ctx.lineWidth = 4;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-      pairs.forEach(([a, b]) => {
-        const kp1 = pose.keypoints[a];
-        const kp2 = pose.keypoints[b];
-        if (!kp1 || !kp2 || kp1.score < 0.3 || kp2.score < 0.3) return;
-        ctx.beginPath();
-        ctx.moveTo(kp1.x, kp1.y);
-        ctx.lineTo(kp2.x, kp2.y);
-        ctx.stroke();
+      POSE_CONNECTIONS.forEach(([a, b]) => {
+        const lmA = landmarks[a];
+        const lmB = landmarks[b];
+        if (lmA && lmB && lmA.visibility > 0.3 && lmB.visibility > 0.3) {
+          ctx.beginPath();
+          ctx.moveTo((1 - lmA.x) * w, lmA.y * h);
+          ctx.lineTo((1 - lmB.x) * w, lmB.y * h);
+          ctx.stroke();
+        }
       });
-      keypoints.forEach((kp) => {
+
+      // ランドマーク点を描画
+      landmarks.forEach((lm, index) => {
+        if (lm.visibility < 0.3) return;
         ctx.beginPath();
-        ctx.arc(kp.x, kp.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = kp.name?.includes('right') ? '#ff6b9a' : '#4ef0c0';
+        ctx.arc((1 - lm.x) * w, lm.y * h, 6, 0, Math.PI * 2);
+        // 右側は赤系、左側は緑系
+        ctx.fillStyle = index % 2 === 0 ? '#4ef0c0' : '#ff6b9a';
         ctx.fill();
       });
     }
 
+    // 2点間の距離計算
     function distance(a, b) {
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
-    function detectJab(side, wrist, shoulder, hip, timestamp) {
-      if (!wrist || !shoulder || !hip) return;
-      if (wrist.score < 0.3 || shoulder.score < 0.3 || hip.score < 0.3) return;
-      const ref = distance(shoulder, hip) || 1;
-      const arm = distance(wrist, shoulder) / ref;
-      const extended = arm > 1.15;
+    // ジャブ検出ロジック（改良版）
+    function detectJab(side, landmarks, timestamp) {
+      const shoulderIdx = side === 'left' ? LANDMARKS.LEFT_SHOULDER : LANDMARKS.RIGHT_SHOULDER;
+      const elbowIdx = side === 'left' ? LANDMARKS.LEFT_ELBOW : LANDMARKS.RIGHT_ELBOW;
+      const wristIdx = side === 'left' ? LANDMARKS.LEFT_WRIST : LANDMARKS.RIGHT_WRIST;
+      const hipIdx = side === 'left' ? LANDMARKS.LEFT_HIP : LANDMARKS.RIGHT_HIP;
+
+      const shoulder = landmarks[shoulderIdx];
+      const elbow = landmarks[elbowIdx];
+      const wrist = landmarks[wristIdx];
+      const hip = landmarks[hipIdx];
+
+      if (!shoulder || !wrist || !hip || !elbow) return;
+      if (shoulder.visibility < 0.3 || wrist.visibility < 0.3) return;
+
+      // 方法1: z座標を使用（手首が肩より前に出ているか）
+      // MediaPipeのz座標は負の値が前方を示す
+      const wristForward = wrist.z < shoulder.z - 0.15;
+
+      // 方法2: 腕の伸び具合（肩から手首までの距離を体の高さで正規化）
+      const bodyHeight = Math.abs(shoulder.y - hip.y) || 0.2;
+      const armLength = distance(wrist, shoulder);
+      const armExtension = armLength / bodyHeight;
+      const armExtended = armExtension > 0.7; // 正規化座標なので閾値を調整
+
+      // 方法3: 手首が肩より外側に出ているか（x座標）
+      // ミラー表示なので左右逆になる
+      const wristOutward = side === 'left'
+        ? wrist.x > shoulder.x + 0.1  // 画面上では右に出る
+        : wrist.x < shoulder.x - 0.1; // 画面上では左に出る
+
+      // 腕が伸びて前方または外側に出ていればパンチと判定
+      const extended = (wristForward || wristOutward) && armExtended;
+
       const state = jabState[side];
-      const cooldown = 220;
+      const cooldown = 180; // 少し短くして反応を良くする
+
+      // 伸ばし状態への遷移時にカウント（クールダウン考慮）
       if (extended && !state.extended && timestamp - state.lastPunch > cooldown) {
         if (side === 'left') {
           left += 1;
@@ -536,32 +659,38 @@
         }
         state.lastPunch = timestamp;
         updateCounts();
+        // デバッグ用：検出時にコンソールに出力
+        console.log(`${side} jab detected! armExt=${armExtension.toFixed(2)}, zDiff=${(shoulder.z - wrist.z).toFixed(2)}`);
       }
       state.extended = extended;
     }
 
+    // ポーズ検出ループ
     async function poseLoop() {
-      if (!detector || videoEl.readyState < 2) {
+      if (!poseLandmarker || videoEl.readyState < 2) {
         poseLoopId = requestAnimationFrame(poseLoop);
         return;
       }
       try {
-        const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
         const ts = performance.now();
+        const results = poseLandmarker.detectForVideo(videoEl, ts);
+
         overlay.width = videoEl.videoWidth;
         overlay.height = videoEl.videoHeight;
-        const pose = poses[0];
-        drawPose(pose);
-        if (pose?.keypoints?.length) {
-          const kp = Object.fromEntries(pose.keypoints.map((p) => [p.name, p]));
+
+        if (results.landmarks && results.landmarks.length > 0) {
+          const landmarks = results.landmarks[0];
+          drawPose(landmarks);
           updateBadge(poseDot, poseStatus, 'ポーズ検出中', 'ok');
           lastPoseTs = ts;
+
           if (running) {
-            detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
-            detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
+            detectJab('left', landmarks, ts);
+            detectJab('right', landmarks, ts);
           }
         } else if (ts - lastPoseTs > 1500) {
           updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
         }
       } catch (e) {
         console.error('Pose detection error:', e);
@@ -569,39 +698,45 @@
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
+    // ポーズ検出器の初期化
     async function initDetector() {
-      if (detector) return;
+      if (poseLandmarker) return;
       try {
-        // スクリプト読み込み完了を待つ
-        await window.scriptsReady;
-        
-        if (typeof poseDetection === 'undefined') {
-          throw new Error('poseDetection ライブラリが読み込まれていません');
-        }
-        
-        await tf.ready();
-        await tf.setBackend('webgl');
         updateBadge(modelDot, modelStatus, 'モデル読み込み中...', 'warn');
-        
-        detector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.MoveNet,
-          { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
+        log('MediaPipe PoseLandmarkerを読み込んでいます...');
+
+        // FilesetResolverで必要なWASMファイルを読み込み
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
         );
-        pairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-        updateBadge(modelDot, modelStatus, 'MoveNet ロード完了', 'ok');
+
+        // PoseLandmarkerを作成
+        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            delegate: 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numPoses: 1
+        });
+
+        drawingUtils = new DrawingUtils(ctx);
+        updateBadge(modelDot, modelStatus, 'PoseLandmarker 準備完了', 'ok');
         log('モデル読み込み完了！肩から拳が見えるように調整してください。');
         poseLoop();
       } catch (e) {
         console.error('Model loading error:', e);
+        updateBadge(modelDot, modelStatus, 'モデルエラー', 'warn');
         log('モデル読み込みエラー: ' + e.message);
       }
     }
 
+    // カメラ初期化
     async function initCamera() {
       if (cameraReady) return;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
+          video: { facingMode: 'user', width: 640, height: 480 },
           audio: false
         });
         videoEl.srcObject = stream;
@@ -617,6 +752,7 @@
       }
     }
 
+    // キーボードイベント
     document.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       if (e.code === 'Space') {
@@ -627,6 +763,7 @@
       handlePunch(e.key);
     });
 
+    // ボタンイベント
     startBtn.addEventListener('click', startGame);
     resetBtn.addEventListener('click', resetGame);
     cameraBtn.addEventListener('click', () => {
@@ -638,10 +775,12 @@
       });
     });
 
+    // 初期状態設定
     setTime(DURATION);
     updateBadge(camDot, camStatus, 'カメラ待機中', 'warn');
     updateBadge(modelDot, modelStatus, 'モデル未ロード', 'warn');
     updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
   </script>
 </body>
+
 </html>
