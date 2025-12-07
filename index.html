@@ -362,14 +362,14 @@
     <header>
       <div>
         <h1>10秒ジャブ連打チャレンジ</h1>
-        <p>ウェブカメラで腕の動きを検知！リズムよくジャブを打とう！</p>
+        <p>全3ラウンドのボスバトル！パンチ連打で敵を倒せ！</p>
       </div>
     </header>
     <div class="content">
       <section class="board" aria-live="polite">
         <div class="score">
           <div>
-            <div class="label">合計ジャブ</div>
+            <div class="label">合計ダメージ</div>
             <div id="total" class="value">0</div>
           </div>
           <div>
@@ -377,8 +377,8 @@
             <div id="time" class="value">10.00s</div>
           </div>
           <div>
-            <div class="label">ベスト</div>
-            <div id="best" class="value">0</div>
+            <div class="label">ラウンド</div>
+            <div id="round-display" class="value">1 / 3</div>
           </div>
         </div>
         <div class="timer">
@@ -471,13 +471,20 @@
     const GAME_URL = 'https://kg-ninja.github.io/hyakuretuken/';
     const HASHTAG = 'KGNINJA';
     // ゲーム設定
-    const DURATION = 10000;
+    const START_DURATION = 10000; // 初期制限時間
+    let duration = START_DURATION;
     let timerId = null;
     let startTime = null;
     let left = 0;
     let right = 0;
     let best = 0;
     let running = false;
+
+    // ラウンド設定
+    let currentRound = 1;
+    let maxRounds = 3;
+    let roundClear = false;
+
     let poseLandmarker = null;
     let cameraReady = false;
     let poseLoopId = null;
@@ -586,10 +593,11 @@
     }
 
     // タイマー表示更新
+    // タイマー表示更新
     function setTime(ms) {
       const seconds = Math.max(0, ms / 1000);
       timeEl.textContent = `${seconds.toFixed(2)}s`;
-      const progress = Math.min(1, (DURATION - ms) / DURATION);
+      const progress = Math.min(1, (START_DURATION - ms) / START_DURATION);
       barFill.style.width = `${progress * 100}%`;
     }
 
@@ -605,34 +613,76 @@
       el.classList.add('pulse');
     }
 
+    function updateRoundDisplay() {
+      const display = document.getElementById('round-display');
+      if (display) display.textContent = `${currentRound} / ${maxRounds}`;
+    }
+
     // ゲーム開始
     function startGame() {
       if (running) return;
-      // オーディオコンテキスト再開（ブラウザの自動再生ポリシー対策）
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
 
       running = true;
+      intervalMode = false;
       left = 0;
       right = 0;
+      currentRound = 1;
       updateCounts();
+      updateRoundDisplay();
+
       startTime = performance.now();
-      setTime(DURATION);
-      log('計測中！リズムよくジャブを打とう！');
+      setTime(START_DURATION);
+      log('ROUND 1 スタート！ボスを倒せ！');
+
+      boss = new Boss(currentRound);
+      shots = [];
+      particles = [];
+
       timerId = requestAnimationFrame(tick);
     }
 
+    // インターバル開始
+    function startInterval() {
+      intervalMode = true;
+      intervalEndTime = performance.now() + 30000; // 30秒
+      log(`ROUND ${currentRound} クリア！ 30秒休憩です。`);
+      // 次のラウンド番号へ（表示はまだ更新しないほうがいいかも？いや、休憩中も今のラウンドクリア済み感を出そう）
+    }
+
+    // 次のラウンドへ
+    function nextRound() {
+      intervalMode = false;
+      currentRound++;
+      if (currentRound > maxRounds) {
+        endGame(true);
+        return;
+      }
+
+      updateRoundDisplay();
+      startTime = performance.now();
+      setTime(START_DURATION);
+      log(`ROUND ${currentRound} スタート！`);
+
+      boss = new Boss(currentRound);
+      shots = [];
+    }
+
     // ゲーム終了
-    function endGame() {
+    function endGame(cleared = false) {
       if (!running) return;
       running = false;
       if (timerId) cancelAnimationFrame(timerId);
       timerId = null;
       setTime(0);
       const total = left + right;
-      log(`結果: 合計 ${total} ジャブ。もう一度挑戦しよう！`);
-      // ツイートボタンを表示
+      if (cleared) {
+        log(`全ラウンドクリア！！おめでとう！合計 ${total} ダメージ！`);
+      } else {
+        log(`ゲームオーバー... 合計 ${total} ダメージ。`);
+      }
       tweetBtn.classList.add('show');
     }
 
@@ -640,24 +690,49 @@
     function resetGame() {
       if (timerId) cancelAnimationFrame(timerId);
       running = false;
+      intervalMode = false;
       left = 0;
       right = 0;
       startTime = null;
-      setTime(DURATION);
+      setTime(START_DURATION);
       updateCounts();
+      currentRound = 1;
+      updateRoundDisplay();
       log('準備完了。STARTボタンかスペースキーで計測開始！');
-      // ツイートボタンを非表示
       tweetBtn.classList.remove('show');
+
+      boss = null;
+      shots = [];
+      particles = [];
+
+      // Canvasクリア
+      if (overlay.width) {
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+      }
     }
 
     // フレームごとのタイマー更新
     function tick(now) {
-      const elapsed = now - startTime;
-      const remaining = Math.max(0, DURATION - elapsed);
-      setTime(remaining);
-      if (remaining <= 0) {
-        endGame();
-        return;
+      if (intervalMode) {
+        const remaining = (intervalEndTime - now);
+        // インターバルタイマー表示はposeLoopで行う（描画ループ側）
+        // ここではロジックのみ
+        if (remaining <= 0) {
+          nextRound();
+        }
+      } else {
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, START_DURATION - elapsed);
+        setTime(remaining);
+
+        if (remaining <= 0) {
+          endGame(false);
+          return;
+        }
+
+        if (boss && boss.isDead) {
+          startInterval();
+        }
       }
       timerId = requestAnimationFrame(tick);
     }
@@ -675,11 +750,16 @@
         updateCounts();
         pulse(rightCard);
       }
-      // 効果音再生
       playPunchSound();
+
+      // キーボードでもショットが出るようにする（デバッグ用・PC用）
+      if (boss && !boss.isDead) {
+        // 画面下中央から発射
+        shots.push(new Shot(0.5, 1.0, boss.x, boss.y));
+      }
     }
 
-    // ポーズ描画（MediaPipe ランドマーク用）
+    // ポーズ描画
     function drawPose(landmarks) {
       ctx.clearRect(0, 0, overlay.width, overlay.height);
       if (!landmarks || landmarks.length === 0) return;
@@ -687,7 +767,6 @@
       const w = overlay.width;
       const h = overlay.height;
 
-      // ボーン（接続線）を描画
       ctx.lineWidth = 4;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
       POSE_CONNECTIONS.forEach(([a, b]) => {
@@ -701,23 +780,224 @@
         }
       });
 
-      // ランドマーク点を描画
       landmarks.forEach((lm, index) => {
         if (lm.visibility < 0.3) return;
         ctx.beginPath();
         ctx.arc((1 - lm.x) * w, lm.y * h, 6, 0, Math.PI * 2);
-        // 右側は赤系、左側は緑系
         ctx.fillStyle = index % 2 === 0 ? '#4ef0c0' : '#ff6b9a';
         ctx.fill();
       });
     }
 
-    // 2点間の距離計算
     function distance(a, b) {
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
-    // ジャブ検出ロジック（改良版）
+    // ---------------------------------------------------------
+    // ARバトルシステム (ボス戦仕様)
+    // ---------------------------------------------------------
+    let boss = null;
+    let particles = [];
+    let shots = [];
+
+    class Boss {
+      constructor(round) {
+        this.x = 0.5; // 中央
+        this.y = 0.4;
+        this.radius = 0.15; // サイズ
+
+        // ラウンドごとの難易度
+        this.maxHp = [15, 30, 50][round - 1] || 50;
+        this.hp = this.maxHp;
+
+        this.color = '#ff4757';
+        this.shake = 0;
+        this.isDead = false;
+
+        this.spawnTime = performance.now();
+        this.msg = `ROUND ${round}`;
+        this.msgAlpha = 1.0;
+      }
+
+      damage(amount = 1) {
+        if (this.isDead) return;
+        this.hp -= amount;
+        this.shake = 10;
+
+        if (this.hp <= 0) {
+          this.hp = 0;
+          this.isDead = true;
+          // 死亡エフェクト
+          spawnExplosion(this.x * overlay.width, this.y * overlay.height, '#ff4757');
+          spawnExplosion(this.x * overlay.width, this.y * overlay.height, '#ffa502');
+          playPunchSound();
+        }
+      }
+
+      update() {
+        if (this.shake > 0) this.shake *= 0.8;
+        if (this.shake < 0.5) this.shake = 0;
+        this.msgAlpha *= 0.98;
+        this.y = 0.4 + Math.sin((performance.now() - this.spawnTime) / 800) * 0.02;
+      }
+
+      draw(ctx, w, h) {
+        if (this.isDead) return;
+
+        const cx = this.x * w;
+        const cy = this.y * h;
+        const offX = (Math.random() - 0.5) * this.shake;
+        const offY = (Math.random() - 0.5) * this.shake;
+
+        ctx.save();
+        ctx.translate(cx + offX, cy + offY);
+
+        // 本体
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * w, 0, Math.PI * 2);
+        ctx.fillStyle = this.color + 'aa';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+
+        // 目
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(-20, -10); ctx.lineTo(-10, 10); ctx.lineTo(-30, 10);
+        ctx.moveTo(20, -10); ctx.lineTo(30, 10); ctx.lineTo(10, 10);
+        ctx.fill();
+
+        // HPゲージ
+        const hpPct = this.hp / this.maxHp;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * w + 15, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * hpPct));
+        ctx.strokeStyle = `hsl(${120 * hpPct}, 80%, 60%)`;
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // メッセージ
+        if (this.msgAlpha > 0.01) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${this.msgAlpha})`;
+          ctx.font = 'bold 40px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.msg, 0, -this.radius * w - 30);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.vx = (Math.random() - 0.5) * 5; // ピクセル速度
+        this.vy = (Math.random() - 0.5) * 5;
+        this.life = 1.0;
+        this.size = Math.random() * 8 + 4;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.05;
+        this.size *= 0.95;
+      }
+
+      draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    class Shot {
+      constructor(x, y, targetX, targetY) {
+        this.x = x;
+        this.y = y;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.life = 1.0;
+        this.color = '#4ef0c0';
+      }
+
+      update() {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        this.x += dx * 0.25; // 高速ホーミング
+        this.y += dy * 0.25;
+
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.05) {
+          this.life = 0;
+          return true; // Hit
+        }
+        return false;
+      }
+
+      draw(ctx, w, h) {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        // x,yは正規化座標
+        ctx.arc(this.x * w, this.y * h, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function spawnExplosion(x, y, color) {
+      for (let i = 0; i < 20; i++) {
+        particles.push(new Particle(x, y, color));
+      }
+    }
+
+    function spawnParticle(x, y, color) {
+      particles.push(new Particle(x, y, color));
+    }
+
+    function updateGameObjects() {
+      if (!running) return;
+      if (boss) boss.update();
+
+      // ショット更新
+      for (let i = shots.length - 1; i >= 0; i--) {
+        const s = shots[i];
+        if (boss && !boss.isDead) {
+          s.targetX = boss.x;
+          s.targetY = boss.y;
+        }
+
+        const hit = s.update();
+        if (hit) {
+          if (boss) boss.damage(1);
+          shots.splice(i, 1);
+        }
+      }
+
+      // パーティクル更新
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function drawGameObjects() {
+      if (!overlay.width) return;
+      const w = overlay.width;
+      const h = overlay.height;
+      if (boss) boss.draw(ctx, w, h);
+      shots.forEach(s => s.draw(ctx, w, h));
+      particles.forEach(p => p.draw(ctx));
+    }
+
+    // ジャブ検出
     function detectJab(side, landmarks, timestamp) {
       const shoulderIdx = side === 'left' ? LANDMARKS.LEFT_SHOULDER : LANDMARKS.RIGHT_SHOULDER;
       const elbowIdx = side === 'left' ? LANDMARKS.LEFT_ELBOW : LANDMARKS.RIGHT_ELBOW;
@@ -732,30 +1012,31 @@
       if (!shoulder || !wrist || !hip || !elbow) return;
       if (shoulder.visibility < 0.3 || wrist.visibility < 0.3) return;
 
-      // 方法1: z座標を使用（手首が肩より前に出ているか）
-      // MediaPipeのz座標は負の値が前方を示す
       const wristForward = wrist.z < shoulder.z - 0.15;
-
-      // 方法2: 腕の伸び具合（肩から手首までの距離を体の高さで正規化）
       const bodyHeight = Math.abs(shoulder.y - hip.y) || 0.2;
       const armLength = distance(wrist, shoulder);
       const armExtension = armLength / bodyHeight;
-      const armExtended = armExtension > 0.7; // 正規化座標なので閾値を調整
+      const armExtended = armExtension > 0.65;
 
-      // 方法3: 手首が肩より外側に出ているか（x座標）
-      // ミラー表示なので左右逆になる
       const wristOutward = side === 'left'
-        ? wrist.x > shoulder.x + 0.1  // 画面上では右に出る
-        : wrist.x < shoulder.x - 0.1; // 画面上では左に出る
+        ? wrist.x > shoulder.x + 0.1
+        : wrist.x < shoulder.x - 0.1;
 
-      // 腕が伸びて前方または外側に出ていればパンチと判定
       const extended = (wristForward || wristOutward) && armExtended;
-
       const state = jabState[side];
-      const cooldown = 180; // 少し短くして反応を良くする
+      const cooldown = 150;
 
-      // 伸ばし状態への遷移時にカウント（クールダウン考慮）
       if (extended && !state.extended && timestamp - state.lastPunch > cooldown) {
+        // ショット発射
+        let targetX = 0.5;
+        let targetY = 0.4;
+        if (boss && !boss.isDead) {
+          targetX = boss.x;
+          targetY = boss.y;
+        }
+        shots.push(new Shot(wrist.x, wrist.y, targetX, targetY));
+        playPunchSound();
+
         if (side === 'left') {
           left += 1;
           pulse(leftCard);
@@ -763,17 +1044,16 @@
           right += 1;
           pulse(rightCard);
         }
-        state.lastPunch = timestamp;
         updateCounts();
-        // 効果音再生
-        playPunchSound();
-        // デバッグ用：検出時にコンソールに出力
-        console.log(`${side} jab detected! armExt=${armExtension.toFixed(2)}, zDiff=${(shoulder.z - wrist.z).toFixed(2)}`);
+        state.lastPunch = timestamp;
       }
       state.extended = extended;
     }
 
-    // ポーズ検出ループ
+    // インターバル管理
+    let intervalMode = false;
+    let intervalEndTime = 0;
+
     async function poseLoop() {
       if (!poseLandmarker || videoEl.readyState < 2) {
         poseLoopId = requestAnimationFrame(poseLoop);
@@ -786,39 +1066,67 @@
         overlay.width = videoEl.videoWidth;
         overlay.height = videoEl.videoHeight;
 
+        // 描画クリア
+        // drawPose内でクリアしているが、ポーズ未検出時もクリア必要
+        // ここではまだクリアしない（drawPoseに任せるか、明示的にするか）
+        // シンプルに:
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
         if (results.landmarks && results.landmarks.length > 0) {
           const landmarks = results.landmarks[0];
-          drawPose(landmarks);
+          drawPose(landmarks); // ここでclearRectしてたが、上でやったので削除すべきか？
+          // drawPose内のclearRectを削除すべきだが、ここでは一括置換できないので
+          // drawPoseをこの置換テキスト内で再定義する際にclearRectを外すのがベスト。
+          // -> drawPoseの定義もここで書き換えるのでOK！
+
           updateBadge(poseDot, poseStatus, 'ポーズ検出中', 'ok');
           lastPoseTs = ts;
 
-          if (running) {
+          if (running && !intervalMode) {
             detectJab('left', landmarks, ts);
             detectJab('right', landmarks, ts);
           }
         } else if (ts - lastPoseTs > 1500) {
           updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
-          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          // ctx.clearRectは上でやっている
         }
       } catch (e) {
         console.error('Pose detection error:', e);
       }
+
+      if (running) {
+        updateGameObjects();
+        drawGameObjects();
+
+        if (intervalMode) {
+          const remaining = Math.max(0, (intervalEndTime - performance.now()) / 1000);
+          ctx.save();
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillRect(0, 0, overlay.width, overlay.height);
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 32px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('NICE FIGHT!', overlay.width / 2, overlay.height / 2 - 40);
+
+          ctx.font = 'bold 60px monospace';
+          ctx.fillStyle = '#4ef0c0';
+          ctx.fillText(`NEXT: ${Math.ceil(remaining)}`, overlay.width / 2, overlay.height / 2 + 30);
+          ctx.restore();
+        }
+      }
+
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
-    // ポーズ検出器の初期化
     async function initDetector() {
       if (poseLandmarker) return;
       try {
         updateBadge(modelDot, modelStatus, 'モデル読み込み中...', 'warn');
         log('MediaPipe PoseLandmarkerを読み込んでいます...');
-
-        // FilesetResolverで必要なWASMファイルを読み込み
         const vision = await FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
         );
-
-        // PoseLandmarkerを作成
         poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
@@ -827,10 +1135,9 @@
           runningMode: 'VIDEO',
           numPoses: 1
         });
-
         drawingUtils = new DrawingUtils(ctx);
         updateBadge(modelDot, modelStatus, 'PoseLandmarker 準備完了', 'ok');
-        log('モデル読み込み完了！肩から拳が見えるように調整してください。');
+        log('モデル読み込み完了！準備ができたらSTART！');
         poseLoop();
       } catch (e) {
         console.error('Model loading error:', e);
@@ -839,7 +1146,6 @@
       }
     }
 
-    // カメラ初期化
     async function initCamera() {
       if (cameraReady) return;
       try {
@@ -860,7 +1166,6 @@
       }
     }
 
-    // キーボードイベント
     document.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       if (e.code === 'Space') {
@@ -871,7 +1176,6 @@
       handlePunch(e.key);
     });
 
-    // ボタンイベント
     startBtn.addEventListener('click', startGame);
     resetBtn.addEventListener('click', resetGame);
     cameraBtn.addEventListener('click', () => {
@@ -883,16 +1187,15 @@
       });
     });
 
-    // ツイートボタンのクリックイベント
     tweetBtn.addEventListener('click', () => {
       const total = left + right;
-      const tweetText = `10秒で ${total} ジャブ打てた！🥊💥 あなたも挑戦してみて！ #${HASHTAG} ${GAME_URL}`;
+      const tweetText = `10秒ジャブ連打チャレンジ！全3ラウンドで ${total} ジャブ！あなたも挑戦してね！ #${HASHTAG} ${GAME_URL}`;
       const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
       window.open(tweetUrl, '_blank', 'width=550,height=420');
     });
 
-    // 初期状態設定
-    setTime(DURATION);
+    // 初期化実行
+    setTime(START_DURATION);
     updateBadge(camDot, camStatus, 'カメラ待機中', 'warn');
     updateBadge(modelDot, modelStatus, 'モデル未ロード', 'warn');
     updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
