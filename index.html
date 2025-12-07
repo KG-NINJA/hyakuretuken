@@ -72,6 +72,7 @@
       background: #03060f;
       border: 1px solid rgba(255, 255, 255, 0.08);
       min-height: 260px;
+      isolation: isolate;
     }
     video, canvas {
       width: 100%;
@@ -212,6 +213,31 @@
       font-size: 14px;
       color: #cfd9e6;
     }
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ffb347;
+      box-shadow: 0 0 0 4px rgba(255, 179, 71, 0.15);
+    }
+    .dot.ok { background: #4ef0c0; box-shadow: 0 0 0 4px rgba(78, 240, 192, 0.15); }
+    .dot.warn { background: #ff6b9a; box-shadow: 0 0 0 4px rgba(255, 107, 154, 0.15); }
     .pulse {
       animation: pulse 0.18s ease;
     }
@@ -282,6 +308,11 @@
           <button id="camera-btn" class="secondary" aria-label="カメラを有効化">カメラ許可</button>
           <div class="hint">TensorFlow MoveNetで手の伸びを検知し、左右のジャブを自動カウントします。</div>
         </div>
+        <div class="badge-row" aria-live="polite">
+          <div class="badge"><span class="dot" id="cam-dot"></span><span id="cam-status">カメラ待機中</span></div>
+          <div class="badge"><span class="dot" id="model-dot"></span><span id="model-status">モデル未ロード</span></div>
+          <div class="badge"><span class="dot" id="pose-dot"></span><span id="pose-status">ポーズ未検出</span></div>
+        </div>
         <div class="keys">
           <div class="key-card">左手：<strong>A</strong> / <strong>←</strong> または左手ジャブ検知</div>
           <div class="key-card">右手：<strong>L</strong> / <strong>→</strong> または右手ジャブ検知</div>
@@ -311,6 +342,12 @@
     const videoEl = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const ctx = overlay.getContext('2d');
+    const camDot = document.getElementById('cam-dot');
+    const camStatus = document.getElementById('cam-status');
+    const modelDot = document.getElementById('model-dot');
+    const modelStatus = document.getElementById('model-status');
+    const poseDot = document.getElementById('pose-dot');
+    const poseStatus = document.getElementById('pose-status');
 
     const DURATION = 10_000; // 10 seconds
     let timerId = null;
@@ -322,17 +359,28 @@
     let detector = null;
     let cameraReady = false;
     let poseLoopId = null;
+    let lastPoseTs = 0;
+    let pairs = [];
     const jabState = {
       left: { extended: false, lastPunch: 0 },
       right: { extended: false, lastPunch: 0 },
     };
 
     bestEl.textContent = best;
+    updateBadge(camDot, camStatus, 'カメラ待機中', 'warn');
+    updateBadge(modelDot, modelStatus, 'モデル未ロード', 'warn');
+    updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
 
     const handKeys = {
       left: ['a', 'ArrowLeft'],
       right: ['l', 'ArrowRight'],
     };
+
+    function updateBadge(dot, label, message, state = 'ok') {
+      dot.classList.toggle('ok', state === 'ok');
+      dot.classList.toggle('warn', state === 'warn');
+      label.textContent = message;
+    }
 
     function updateCounts() {
       const total = left + right;
@@ -423,12 +471,22 @@
       }
     }
 
-    function drawKeypoints(keypoints) {
+    function drawPose(pose) {
       ctx.clearRect(0, 0, overlay.width, overlay.height);
-      ctx.strokeStyle = 'rgba(78, 240, 192, 0.7)';
+      if (!pose?.keypoints) return;
+      const keypoints = pose.keypoints.filter((kp) => kp.score >= 0.3);
       ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      pairs.forEach(([a, b]) => {
+        const kp1 = pose.keypoints[a];
+        const kp2 = pose.keypoints[b];
+        if (!kp1 || !kp2 || kp1.score < 0.3 || kp2.score < 0.3) return;
+        ctx.beginPath();
+        ctx.moveTo(kp1.x, kp1.y);
+        ctx.lineTo(kp2.x, kp2.y);
+        ctx.stroke();
+      });
       keypoints.forEach((kp) => {
-        if (kp.score < 0.3) return;
         ctx.beginPath();
         ctx.arc(kp.x, kp.y, 5, 0, Math.PI * 2);
         ctx.fillStyle = kp.name?.includes('right') ? '#ff6b9a' : '#4ef0c0';
@@ -469,26 +527,35 @@
       }
       const poses = await detector.estimatePoses(videoEl, { flipHorizontal: true });
       const ts = performance.now();
-      if (poses[0]?.keypoints) {
-        const kp = Object.fromEntries(poses[0].keypoints.map((p) => [p.name, p]));
-        overlay.width = videoEl.videoWidth;
-        overlay.height = videoEl.videoHeight;
-        drawKeypoints(poses[0].keypoints);
+      overlay.width = videoEl.videoWidth;
+      overlay.height = videoEl.videoHeight;
+      const pose = poses[0];
+      drawPose(pose);
+      if (pose?.keypoints?.length) {
+        const kp = Object.fromEntries(pose.keypoints.map((p) => [p.name, p]));
+        updateBadge(poseDot, poseStatus, 'ポーズ検出中', 'ok');
+        lastPoseTs = ts;
         if (running) {
           detectJab('left', kp['left_wrist'], kp['left_shoulder'], kp['left_hip'], ts);
           detectJab('right', kp['right_wrist'], kp['right_shoulder'], kp['right_hip'], ts);
         }
+      } else if (ts - lastPoseTs > 1500) {
+        updateBadge(poseDot, poseStatus, 'ポーズ未検出', 'warn');
       }
       poseLoopId = requestAnimationFrame(poseLoop);
     }
 
     async function initDetector() {
       if (detector) return detector;
+      await tf.ready();
       await tf.setBackend('webgl');
+      modelStatus.textContent = 'モデル読み込み中…';
       detector = await poseDetection.createDetector(
         poseDetection.SupportedModels.MoveNet,
         { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER }
       );
+      pairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
+      updateBadge(modelDot, modelStatus, 'MoveNet ロード完了', 'ok');
       log('モデル読み込み完了。肩から拳が見えるようにカメラを調整してください。');
       return detector;
     }
@@ -500,11 +567,13 @@
         videoEl.srcObject = stream;
         await videoEl.play();
         cameraReady = true;
+        updateBadge(camDot, camStatus, 'カメラ稼働中', 'ok');
         log('カメラ準備OK！肩と拳が映る位置でスタンバイ。');
         await initDetector();
         poseLoop();
       } catch (e) {
         console.error(e);
+        updateBadge(camDot, camStatus, 'カメラ拒否または未接続', 'warn');
         log('カメラの許可が必要です。ブラウザ設定を確認してください。');
       }
     }
