@@ -336,6 +336,23 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.18.0/dist/tf-backend-webgl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@4.1.0/dist/pose-detection.min.js"></script>
   <script>
+    // スクリプト読み込み完了待機
+    function waitForDependencies() {
+      return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (typeof tf !== 'undefined' && typeof poseDetection !== 'undefined') {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 5000);
+      });
+    }
+  </script>
+  <script>
     const totalEl = document.getElementById('total');
     const timeEl = document.getElementById('time');
     const bestEl = document.getElementById('best');
@@ -605,6 +622,11 @@
     });
 
     setTime(DURATION);
+
+    // 依存関係の読み込み完了を待機してから準備完了
+    waitForDependencies().then(() => {
+      log('依存関係の読み込み完了。カメラ許可ボタンを押してください。');
+    });
   </script>
 </body>
 </html>
